@@ -39,12 +39,14 @@ local Settings = {
         JitterAmount    = 0.05,
         PeriodicDisable  = false,
         DisableInterval  = 0,
+        Keybind         = "RightClick",
     },
 
     FOV = {
         Visible = true,
         Radius  = 150,
         Color   = Color3.fromRGB(255, 255, 255),
+        Transparency = 0.8,
     },
 
     Visuals = {
@@ -52,6 +54,8 @@ local Settings = {
         ESPEnabled      = false,
         ESPBoxes        = true,
         ESPNames        = true,
+        ShowTeammates   = false,
+        TeammateColor   = Color3.fromRGB(0, 255, 255),
         DistanceDisplay = false,
         HealthNumbers   = false,
         UseVisColors    = true,
@@ -83,15 +87,6 @@ local Settings = {
         DisableDuration         = 0.2,
     },
 
-    Crosshair = {
-        Enabled     = true,
-        Style       = "Plus",
-        Size        = 15,
-        Thickness   = 2,
-        Color       = Color3.fromRGB(0, 255, 0),
-        Transparency = 0.8,
-    },
-
     Notifications = {
         Enabled         = true,
         ShowKills       = true,
@@ -105,7 +100,7 @@ local Settings = {
 local FOVRing = Drawing.new("Circle")
 FOVRing.Visible      = false
 FOVRing.Thickness    = 1.5
-FOVRing.Transparency = 0.8
+FOVRing.Transparency = Settings.FOV.Transparency
 FOVRing.Color        = Settings.FOV.Color
 FOVRing.Filled       = false
 
@@ -114,15 +109,6 @@ ChamsFolder.Name   = "KaimChams"
 ChamsFolder.Parent = CoreGui
 
 local TracerLines = {}
-
--- Crosshair drawings
-local CrosshairGroup = Instance.new("ScreenGui", CoreGui)
-CrosshairGroup.Name          = "Crosshair"
-CrosshairGroup.ResetOnSpawn  = false
-
-local CrosshairH   = Drawing.new("Line")
-local CrosshairV   = Drawing.new("Line")
-local CrosshairDot = Drawing.new("Circle")
 
 -- Target UI - Enhanced HUD
 local TargetGui   = Instance.new("ScreenGui", CoreGui)
@@ -230,7 +216,7 @@ local Window = WindUI:CreateWindow({
     Resizable = true,
 })
 
-Window:SetToggleKey(Enum.KeyCode.H)
+Window:SetToggleKey(Enum.KeyCode.K)
 
 local AimlockTab = Window:Tab({Title = "Aimlock", Icon = "crosshair"})
 local ESPTab = Window:Tab({Title = "ESP", Icon = "eye"})
@@ -271,6 +257,18 @@ local function IsTargetValid(player)
     return onScreen
 end
 
+-- Check if target is alive (for sticky lock - stays locked regardless of walls/visibility)
+local function IsTargetAlive(player)
+    if not player or not player.Character then return false end
+    if Settings.Aimlock.TeamCheck and IsTeammate(player) then return false end
+    
+    local humanoid = player.Character:FindFirstChild("Humanoid")
+    local targetPart = player.Character:FindFirstChild(Settings.Aimlock.TargetPart)
+    
+    if not humanoid or not targetPart or humanoid.Health <= 0 then return false end
+    return true
+end
+
 local function GetAimPart(character)
     if Settings.Aimlock.AimMode == "Head" then
         return character:FindFirstChild("Head")
@@ -304,69 +302,6 @@ local function SmoothAim(currentCFrame, targetCFrame, speed)
     return currentCFrame:Lerp(targetCFrame, speed or Settings.Aimlock.SmoothSpeed)
 end
 
-local function UpdateCrosshair()
-    if not Settings.Crosshair.Enabled then
-        CrosshairH.Visible   = false
-        CrosshairV.Visible   = false
-        CrosshairDot.Visible = false
-        return
-    end
-
-    local centerX    = Camera.ViewportSize.X / 2
-    local centerY    = Camera.ViewportSize.Y / 2
-    local size       = Settings.Crosshair.Size
-    local thickness  = Settings.Crosshair.Thickness
-    local color      = Settings.Crosshair.Color
-    local trans      = Settings.Crosshair.Transparency
-
-    if Settings.Crosshair.Style == "Plus" then
-        CrosshairH.From        = Vector2.new(centerX - size, centerY)
-        CrosshairH.To          = Vector2.new(centerX + size, centerY)
-        CrosshairH.Color       = color
-        CrosshairH.Thickness   = thickness
-        CrosshairH.Transparency = trans
-        CrosshairH.Visible     = true
-
-        CrosshairV.From        = Vector2.new(centerX, centerY - size)
-        CrosshairV.To          = Vector2.new(centerX, centerY + size)
-        CrosshairV.Color       = color
-        CrosshairV.Thickness   = thickness
-        CrosshairV.Transparency = trans
-        CrosshairV.Visible     = true
-
-        CrosshairDot.Visible   = false
-
-    elseif Settings.Crosshair.Style == "Circle" then
-        CrosshairDot.Position    = Vector2.new(centerX, centerY)
-        CrosshairDot.Radius      = size
-        CrosshairDot.Color       = color
-        CrosshairDot.Thickness   = thickness
-        CrosshairDot.Transparency = trans
-        CrosshairDot.Filled      = false
-        CrosshairDot.Visible     = true
-
-        CrosshairH.Visible       = false
-        CrosshairV.Visible       = false
-
-    elseif Settings.Crosshair.Style == "X" then
-        CrosshairH.From        = Vector2.new(centerX - size, centerY - size)
-        CrosshairH.To          = Vector2.new(centerX + size, centerY + size)
-        CrosshairH.Color       = color
-        CrosshairH.Thickness   = thickness
-        CrosshairH.Transparency = trans
-        CrosshairH.Visible     = true
-
-        CrosshairV.From        = Vector2.new(centerX - size, centerY + size)
-        CrosshairV.To          = Vector2.new(centerX + size, centerY - size)
-        CrosshairV.Color       = color
-        CrosshairV.Thickness   = thickness
-        CrosshairV.Transparency = trans
-        CrosshairV.Visible     = true
-
-        CrosshairDot.Visible   = false
-    end
-end
-
 function GetClosestPlayer()
     local closestDistance = Settings.FOV.Radius
     local closestTarget   = nil
@@ -396,6 +331,7 @@ local function CreateESP(player)
     local esp = {
         Box       = Drawing.new("Square"),
         Name      = Drawing.new("Text"),
+        Health    = Drawing.new("Text"),
         Highlight = Instance.new("Highlight"),
     }
 
@@ -408,6 +344,11 @@ local function CreateESP(player)
     esp.Name.Size     = 16
     esp.Name.Center   = true
     esp.Name.Outline  = true
+
+    esp.Health.Visible = false
+    esp.Health.Size    = 14
+    esp.Health.Center  = true
+    esp.Health.Outline = true
 
     esp.Highlight.Parent    = ChamsFolder
     esp.Highlight.Enabled   = false
@@ -425,6 +366,7 @@ Players.PlayerRemoving:Connect(function(player)
     if ESPObjects[player] then
         ESPObjects[player].Box:Remove()
         ESPObjects[player].Name:Remove()
+        ESPObjects[player].Health:Remove()
         ESPObjects[player].Highlight:Destroy()
         ESPObjects[player] = nil
     end
@@ -444,8 +386,8 @@ AimlockSection:Toggle({
 AimlockSection:Keybind({
     Title = "Aimlock Key",
     Desc = "Press to aim lock",
-    Value = "E",
-    Callback = function(v) end
+    Value = "RightClick",
+    Callback = function(v) Settings.Aimlock.Keybind = v end
 })
 
 AimlockSection:Toggle({
@@ -523,6 +465,26 @@ ESPSection:Toggle({
     Title = "Enable ESP",
     Desc = "Show player boxes",
     Callback = function(v) Settings.Visuals.ESPEnabled = v end
+})
+
+ESPSection:Toggle({
+    Title = "Team Check",
+    Desc = "Skip teammates",
+    Value = true,
+    Callback = function(v) Settings.Visuals.TeamCheck = v end
+})
+
+ESPSection:Toggle({
+    Title = "Show Teammates",
+    Desc = "Show teammates with color",
+    Value = false,
+    Callback = function(v) Settings.Visuals.ShowTeammates = v end
+})
+
+ESPSection:Colorpicker({
+    Title = "Teammate Color",
+    Default = Color3.fromRGB(0, 255, 255),
+    Callback = function(v) Settings.Visuals.TeammateColor = v end
 })
 
 ESPSection:Toggle({
@@ -629,38 +591,17 @@ FOVSection:Slider({
     Callback = function(v) Settings.FOV.Radius = v end
 })
 
+FOVSection:Slider({
+    Title = "FOV Transparency",
+    Step = 0.1,
+    Value = {Min = 0, Max = 1, Default = 0.8},
+    Callback = function(v) Settings.FOV.Transparency = v; FOVRing.Transparency = v end
+})
+
 FOVSection:Colorpicker({
     Title = "FOV Color",
     Default = Color3.fromRGB(255, 255, 255),
     Callback = function(v) Settings.FOV.Color = v; FOVRing.Color = v end
-})
-
-local CrosshairSection = VisualsTab:Section({Title = "Crosshair", Opened = true})
-
-CrosshairSection:Toggle({
-    Title = "Enable Crosshair",
-    Value = true,
-    Callback = function(v) Settings.Crosshair.Enabled = v end
-})
-
-CrosshairSection:Dropdown({
-    Title = "Style",
-    Values = {"Plus", "Circle", "X"},
-    Value = "Plus",
-    Callback = function(v) Settings.Crosshair.Style = v end
-})
-
-CrosshairSection:Slider({
-    Title = "Size",
-    Step = 1,
-    Value = {Min = 5, Max = 50, Default = 15},
-    Callback = function(v) Settings.Crosshair.Size = v end
-})
-
-CrosshairSection:Colorpicker({
-    Title = "Color",
-    Default = Color3.fromRGB(0, 255, 0),
-    Callback = function(v) Settings.Crosshair.Color = v end
 })
 
 -- ============================================================
@@ -701,6 +642,7 @@ RunService.RenderStepped:Connect(function()
     FOVRing.Position = mousePos
     FOVRing.Radius   = Settings.FOV.Radius
     FOVRing.Visible  = Settings.FOV.Visible
+    FOVRing.Transparency = Settings.FOV.Transparency
 
     -- Periodic aim disable
     if Settings.DetectionAvoidance.PeriodicAimDisable and Settings.Aimlock.Enabled then
@@ -709,7 +651,7 @@ RunService.RenderStepped:Connect(function()
 
     -- Aimlock logic
     if Settings.Aimlock.Enabled and Settings.Aimlock.IsAiming then
-        if not Settings.Aimlock.CurrentTarget or not IsTargetValid(Settings.Aimlock.CurrentTarget) then
+        if not Settings.Aimlock.CurrentTarget or not IsTargetAlive(Settings.Aimlock.CurrentTarget) then
             Settings.Aimlock.CurrentTarget = GetClosestPlayer()
         end
     end
@@ -769,9 +711,6 @@ RunService.RenderStepped:Connect(function()
     else
         TargetFrame.Visible = false
     end
-
-    -- Crosshair
-    UpdateCrosshair()
 
     -- Player modifications
     if LocalPlayer.Character then
@@ -850,7 +789,10 @@ RunService.RenderStepped:Connect(function()
                     local isVisible = IsVisible(rootPart, player.Character)
                     local espColor  = Color3.fromRGB(255, 255, 255)
 
-                    if Settings.Visuals.UseVisColors then
+                    -- Determine color based on teammate or visibility
+                    if isTeammate and Settings.Visuals.ShowTeammates then
+                        espColor = Settings.Visuals.TeammateColor
+                    elseif Settings.Visuals.UseVisColors then
                         espColor = isVisible and Settings.Visuals.VisColor or Settings.Visuals.HiddenColor
                     end
 
@@ -876,14 +818,31 @@ RunService.RenderStepped:Connect(function()
                             local distance = GetDistance(LocalPlayer.Character.HumanoidRootPart.Position, rootPart.Position)
                             nameText = nameText .. " [" .. math.floor(distance) .. "m]"
                         end
-                        if Settings.Visuals.HealthNumbers then
-                            nameText = nameText .. " HP: " .. math.floor(player.Character.Humanoid.Health)
-                        end
                         esp.Name.Visible   = true
                         esp.Name.Text      = nameText
                         esp.Name.Position  = Vector2.new(rootPos.X, headPos.Y - 20)
                     else
                         esp.Name.Visible = false
+                    end
+
+                    if Settings.Visuals.HealthNumbers then
+                        local healthPercent = math.clamp(player.Character.Humanoid.Health / player.Character.Humanoid.MaxHealth, 0, 1)
+                        local healthColor = Color3.fromRGB(255, 255, 255)
+                        
+                        if healthPercent > 0.6 then
+                            healthColor = Color3.fromRGB(0, 255, 100)
+                        elseif healthPercent > 0.3 then
+                            healthColor = Color3.fromRGB(255, 200, 0)
+                        else
+                            healthColor = Color3.fromRGB(255, 50, 50)
+                        end
+                        
+                        esp.Health.Visible = true
+                        esp.Health.Text    = math.floor(player.Character.Humanoid.Health)
+                        esp.Health.Color   = healthColor
+                        esp.Health.Position = Vector2.new(rootPos.X - boxWidth / 2 - 30, headPos.Y + boxHeight / 2)
+                    else
+                        esp.Health.Visible = false
                     end
 
                     if Settings.Visuals.SnapLines then
@@ -914,7 +873,20 @@ end)
 -- Keybind handling
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.E then
+    
+    local isAimKeyPressed = false
+    
+    if Settings.Aimlock.Keybind == "RightClick" then
+        if input.UserInputType == Enum.UserInputType.MouseButton2 then
+            isAimKeyPressed = true
+        end
+    else
+        if input.KeyCode == Enum.KeyCode[Settings.Aimlock.Keybind] then
+            isAimKeyPressed = true
+        end
+    end
+    
+    if isAimKeyPressed then
         Settings.Aimlock.IsAiming = true
         if Settings.Aimlock.Enabled then
             Settings.Aimlock.CurrentTarget = GetClosestPlayer()
@@ -923,10 +895,22 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 UserInputService.InputEnded:Connect(function(input, gameProcessed)
-    if input.KeyCode == Enum.KeyCode.E then
+    local isAimKeyReleased = false
+    
+    if Settings.Aimlock.Keybind == "RightClick" then
+        if input.UserInputType == Enum.UserInputType.MouseButton2 then
+            isAimKeyReleased = true
+        end
+    else
+        if input.KeyCode == Enum.KeyCode[Settings.Aimlock.Keybind] then
+            isAimKeyReleased = true
+        end
+    end
+    
+    if isAimKeyReleased then
         Settings.Aimlock.IsAiming = false
         Settings.Aimlock.CurrentTarget = nil
     end
 end)
 
-print("✓ KAIM v2.0 (WindUI) loaded successfully! Press H to toggle UI.")
+print("✓ KAIM v2.0 (WindUI) loaded successfully! Press K to toggle UI.")
