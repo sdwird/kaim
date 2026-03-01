@@ -172,6 +172,15 @@ local Window = WindUI:CreateWindow({
     Resizable = true,
 })
 
+do
+    Window:Tag({
+        Title = "v" .. WindUI.Version,
+        Icon = "github",
+        Color = Color3.fromHex("#1c1c1c"),
+        Border = true,
+    })
+end
+
 Window:SetToggleKey(Enum.KeyCode.K)
 
 -- ============================================================
