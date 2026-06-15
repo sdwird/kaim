@@ -1,9 +1,17 @@
 # kaim
 best aimbot script ever
+
+Latest Stable release
 ```
-loadstring(game:HttpGet("https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-v4.1.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-v6.0.lua"))()
 ```
-copy paste to any executor (%80 unc required to work)
+
+Experimental release
+```
+loadstring(game:HttpGet("https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-v6.5.lua"))()
+```
+
+copy paste to any executor (the script doesnt work on mobile devices)
 
 
 # ⚠️ Important Notice
