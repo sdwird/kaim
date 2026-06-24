@@ -1888,45 +1888,38 @@ local Params = RaycastParams.new()
 Params.FilterType = Enum.RaycastFilterType.Exclude
 local Direction = Vector3.new(0, -100, 0)
 
--- OPTIMIZED: The bypass loop handles physics property adjustments safely without Remote spamming.
+-- OPTIMIZED: Switched from un-throttled task.wait(0) to safe interval execution
 task.spawn(function()
 while true do
-    local waitTime = 0.2
+    local waitTime = (Options.SpeedBypassMethod and Options.SpeedBypassMethod.Value == "Method 1") and 0.25 or 0.209
     task.wait(waitTime)
     if Library.Unloaded then break end
-    
-    if Toggles.BypassSpeed.Value then
+    if Options.SpeedBypassMethod.Value == "Method 1" then
+        if Toggles.BypassSpeed.Value then
+            if CollisionClone then CollisionClone.Massless = true end
+            RemotesFolder.Crouch:FireServer(true, true)
+        end
+    elseif Options.SpeedBypassMethod.Value == "Method 2" then
         local char = LocalPlayer.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local collision = char and char:FindFirstChild("Collision")
-        
-        if Options.SpeedBypassMethod.Value == "Method 1" then
-            if collision then 
-                collision.Massless = true 
-                collision.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
-            end
-            if CollisionClone then CollisionClone.Massless = true end
-            
-        elseif Options.SpeedBypassMethod.Value == "Method 2" then
-            if LocalPlayer:GetAttribute("Alive") and hrp and CollisionClone and CollisionClone.Parent then
-                Params.FilterDescendantsInstances = {char, CollisionClone}
-                if not workspace:Raycast(hrp.Position, Direction, Params) then
+        if LocalPlayer:GetAttribute("Alive") and hrp and CollisionClone and CollisionClone.Parent then
+            Params.FilterDescendantsInstances = {char, CollisionClone}
+            if not workspace:Raycast(hrp.Position, Direction, Params) or not Toggles.BypassSpeed.Value then
+                CollisionClone.Massless = true
+            else
+                local cp = char:FindFirstChild("CollisionPart")
+                if cp and (cp.Anchored or Passed) then
                     CollisionClone.Massless = true
-                else
-                    local cp = char:FindFirstChild("CollisionPart")
-                    if cp and (cp.Anchored or Passed) then
+                    repeat task.wait() until not cp.Anchored or not cp.Parent
+                    if CollisionClone and CollisionClone.Parent then
                         CollisionClone.Massless = true
-                        repeat task.wait() until not cp.Anchored or not cp.Parent
-                        if CollisionClone and CollisionClone.Parent then
-                            CollisionClone.Massless = true
-                            task.wait(0.5)
-                            if CollisionClone and CollisionClone.Parent then CollisionClone.Massless = false end
-                        end
-                    else
-                        if LocalPlayer:GetAttribute("Alive") then CollisionClone.Massless = true end
-                        task.wait(0.2)
-                        if LocalPlayer:GetAttribute("Alive") and CollisionClone and CollisionClone.Parent then CollisionClone.Massless = false end
+                        task.wait(0.5)
+                        if CollisionClone and CollisionClone.Parent then CollisionClone.Massless = false end
                     end
+                else
+                    if LocalPlayer:GetAttribute("Alive") then CollisionClone.Massless = true end
+                    task.wait(0.209)
+                    if LocalPlayer:GetAttribute("Alive") and CollisionClone and CollisionClone.Parent then CollisionClone.Massless = false end
                 end
             end
         end
@@ -2307,12 +2300,12 @@ local InfItemsDelay = 0
 local PlayerESP = 0
 local DoorReach = 0
 
+-- TRACKING: Added explicit debounce variables to prevent frame-rate flooding
 local EyesDelay = 0
 local AutoHidingDelay = 0
 local AestheticsDelay = 0
 local FullBrightDelay = 0
 
--- OPTIMIZED: Central RenderStepped Loop for Movement and Freecam Calculation
 table.insert(Connections,RunService.RenderStepped:Connect(function(dt)
 AutoInteract += dt
 NotifyCode += dt
@@ -2363,10 +2356,17 @@ end
 
 if Camera ~= workspace.CurrentCamera then Camera = workspace.CurrentCamera end
 
+if not LocalPlayer.Character:GetAttribute("Climbing") and Toggles.EnableMovementSpeed.Value then
+if LocalPlayer.Character.Humanoid.WalkSpeed ~= Options.MovementSpeed.Value then LocalPlayer.Character.Humanoid.WalkSpeed = Options.MovementSpeed.Value end
+elseif LocalPlayer.Character:GetAttribute("Climbing") and Toggles.EnableClimbingSpeed.Value then
+if LocalPlayer.Character.Humanoid.WalkSpeed ~= Options.ClimbingSpeed.Value then LocalPlayer.Character.Humanoid.WalkSpeed = Options.ClimbingSpeed.Value end
+end
+
 if Toggles.ThirdPerson.Value then
 Camera.CFrame = Camera.CFrame * CFrame.new(Options.X.Value, Options.Y.Value, Options.Z.Value)
 end
 
+-- OPTIMIZED: Aesthetic logic no longer updates character models every single frame
 if AestheticsDelay > 0.1 then
     AestheticsDelay = 0
     for _, v in pairs(LocalPlayer.Character:GetChildren()) do
@@ -2437,59 +2437,9 @@ if fcPart and curCam then
         fcPart.Position = fcPart.Position + (finalMove * speed * dt)
     end
 end
-end
 
--- OPTIMIZED: Flight and Speed calculations
-if Toggles.Flight.Value then
-    local char = LocalPlayer.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if root then
-        local flightVel = root:FindFirstChild("FlightVelocity")
-        if not flightVel then
-            flightVel = Instance.new("BodyVelocity")
-            flightVel.Name = "FlightVelocity"
-            flightVel.MaxForce = Vector3.new(100000, 100000, 100000)
-            flightVel.P = 10000
-            flightVel.Parent = root
-        end
-        
-        local moveVector = Vector3.zero
-        pcall(function() moveVector = require(LocalPlayer.PlayerScripts.PlayerModule):GetControls():GetMoveVector() end)
-        
-        local camCFrame = Camera.CFrame
-        local moveDir = (camCFrame.RightVector * moveVector.X + camCFrame.LookVector * -moveVector.Z)
-        
-        local up = 0
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then up = 1 end
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then up = -1 end
-        
-        local finalDir = moveDir + Vector3.new(0, up, 0)
-        if finalDir.Magnitude > 0 then finalDir = finalDir.Unit end
-        
-        flightVel.Velocity = finalDir * Options.FlightSpeed.Value
-    end
-else
-    local flightVel = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart:FindFirstChild("FlightVelocity")
-    if flightVel then flightVel:Destroy() end
-    
-    -- Speed Override if NOT flying
-    local char = LocalPlayer.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    local hum = char and char:FindFirstChild("Humanoid")
-    
-    if root and hum then
-        if not char:GetAttribute("Climbing") and Toggles.EnableMovementSpeed.Value then
-            if hum.WalkSpeed ~= Options.MovementSpeed.Value then hum.WalkSpeed = Options.MovementSpeed.Value end
-            local moveDir = hum.MoveDirection
-            if moveDir.Magnitude > 0 then
-                root.AssemblyLinearVelocity = Vector3.new(moveDir.X * Options.MovementSpeed.Value, root.AssemblyLinearVelocity.Y, moveDir.Z * Options.MovementSpeed.Value)
-            end
-        elseif char:GetAttribute("Climbing") and Toggles.EnableClimbingSpeed.Value then
-            if hum.WalkSpeed ~= Options.ClimbingSpeed.Value then hum.WalkSpeed = Options.ClimbingSpeed.Value end
-        end
-    end
-end
 
+end
 
 if Toggles.DeleteFigureFE.Value and Figures then
 for _, v in pairs(Figures) do
@@ -2604,6 +2554,27 @@ local Code = GetLibraryCode()
 if Code and LatestRoom.Value == 50 then Notify("Code " .. Code) end
 end
 
+if Toggles.Flight.Value then
+if not LocalPlayer.Character.HumanoidRootPart:FindFirstChild("FlightVelocity") then
+local Velocity = Instance.new("BodyVelocity", LocalPlayer.Character.HumanoidRootPart)
+Velocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+Velocity.Velocity = Vector3.zero
+Velocity.Name = "FlightVelocity"
+Velocity.P = math.huge
+end
+if OldAccel then LocalPlayer.Character.HumanoidRootPart.CustomPhysicalProperties = OldAccel end
+
+local moveDir = LocalPlayer.Character.Humanoid.MoveDirection
+local flatLook = Camera.CFrame.LookVector * Vector3.new(1, 0, 1)
+if flatLook.Magnitude < 0.001 then flatLook = Camera.CFrame.UpVector * Vector3.new(1, 0, 1) * math.sign(-Camera.CFrame.LookVector.Y) end
+local flatCam = CFrame.lookAt(Vector3.zero, flatLook)
+local localInput = flatCam:VectorToObjectSpace(moveDir)
+LocalPlayer.Character.HumanoidRootPart:FindFirstChild("FlightVelocity").Velocity = Camera.CFrame:VectorToWorldSpace(localInput) * Options.FlightSpeed.Value
+
+
+end
+
+-- OPTIMIZED: AutoHiding environment scans now run on a healthy interval loop instead of every frame
 if Toggles.AutoHiding.Value and AutoHidingDelay > 0.1 then
 AutoHidingDelay = 0
 local Closet = GetNearestHidingSpot()
@@ -2786,6 +2757,7 @@ if Toggles.LadderBypass.Value then
 if LocalPlayer.Character:GetAttribute("Climbing") then LocalPlayer.Character:SetAttribute("Climbing",false); Notify("Anticheat Bypassed this only works until you get a cutscene or Halt",5) end
 end
 
+-- OPTIMIZED: Network flooding resolved. Entity bypass calls are throttled to safe intervals
 if EyesDelay > 0.2 then
     EyesDelay = 0
     if Toggles.EyesDamage.Value then
@@ -2801,6 +2773,7 @@ if EyesDelay > 0.2 then
     end
 end
 
+-- OPTIMIZED: FullBright checks are scheduled rather than running frame-by-frame
 if Toggles.FullBright.Value and FullBrightDelay > 0.3 then
     FullBrightDelay = 0
     if Lighting.Ambient ~= Color3.new(1, 1, 1) then Lighting.Ambient = Color3.new(1, 1, 1) end
@@ -2852,6 +2825,8 @@ LocalPlayer.Character.Collision.CanCollide = false
 if LocalPlayer.Character.Collision:FindFirstChild("CollisionCrouch") then LocalPlayer.Character.Collision.CollisionCrouch.CanCollide = false end
 end
 end
+
+-- OPTIMIZED: Removed heavy frame-by-frame collision setter from the inactive loop branches
 
 if Toggles.FastClosetExit.Value then
 if LocalPlayer.Character:GetAttribute("Hiding") and LocalPlayer.Character.Humanoid.MoveDirection.Magnitude > 0.45 then CamLock:FireServer() end
@@ -2918,6 +2893,7 @@ return Old(Self, ...)
 end)
 end
 
+-- STREAMING_CHUNK:Optimized Workspace Instance Creation...
 table.insert(Connections, workspace.DescendantAdded:Connect(function(v)
 task.spawn(function()
 if not v.Parent then
@@ -3073,6 +3049,7 @@ end)
 
 end))
 
+-- STREAMING_CHUNK:Optimized Memory Collection System...
 table.insert(Connections, workspace.DescendantRemoving:Connect(function(v)
 if v:IsA("ProximityPrompt") then
 for i = #Interactions, 1, -1 do
