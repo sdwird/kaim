@@ -1,20 +1,19 @@
-## My Project Logo
+# kaim
+best aimbot script ever
 
-![Project Logo](https://placehold.co/200x80?text=Logo+Placeholder "The logo I designed represents [meaning]")
+Latest Stable release
+```
+loadstring(game:HttpGet("https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-v8.2.lua"))()
+```
+
+Experimental release
+```
+loadstring(game:HttpGet("https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-v8.8.lua"))()
+```
+
+copy paste to any executor (the script doesnt work on mobile devices)
 
 
+# ⚠️ Important Notice
 
-# My Project Title
-
-I created this project to [briefly explain purpose]. It solves [specific problem] by [your solution approach].
-
-## Key Focus Areas
-
-- Primary goal I achieved: [main accomplishment]
-- Unique value I provide: [key differentiator]
-
-
-
-## My Project Logo
-
-![Project Logo](https://placehold.co/200x80?text=Logo+Placeholder "The logo I designed represents [meaning]")
+Config Resets: Due to frequent optimizations and updates to the script's memory structure, old configuration files may occasionally break after major updates. If the script does not load your settings, please delete your old config and create a new one!
