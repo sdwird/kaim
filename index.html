@@ -3,1256 +3,667 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<meta name="description" content="kaim — precision Lua aimbot script for Roblox executors. One loadstring, instant activation."/>
+<meta name="description" content="kaim — Lua aimbot script for Roblox. One loadstring, instant activation."/>
 <title>kaim</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
 <style>
-/* ══════════════════════════════════════════════
-   TOKENS
-══════════════════════════════════════════════ */
 :root {
-  --night:   #060612;
-  --ink:     #0c0c1a;
-  --card:    #10101e;
-  --line:    #1c1c2e;
-  --line2:   #252538;
-  --purple:  #7c3aed;
-  --violet:  #a78bfa;
-  --lilac:   #c4b5fd;
-  --teal:    #2dd4bf;
-  --green:   #22c55e;
-  --red:     #ef4444;
-  --amber:   #f59e0b;
-  --snow:    #e8e8f8;
-  --mist:    #6b6b90;
-  --dim:     #40405a;
-  --glow:    rgba(124,58,237,.28);
-  --glow-sm: rgba(124,58,237,.12);
+  --bg:       #05050d;
+  --surface:  #09091a;
+  --card:     #0d0d1e;
+  --card2:    #111124;
+  --border:   #18182e;
+  --border2:  #222238;
+  --purple:   #7c3aed;
+  --violet:   #a78bfa;
+  --lilac:    #c4b5fd;
+  --teal:     #22d3ee;
+  --green:    #4ade80;
+  --amber:    #fbbf24;
+  --snow:     #eeeef8;
+  --muted:    #6b6b92;
+  --dim:      #38385a;
+  --glow:     rgba(124,58,237,.3);
+  --glow2:    rgba(124,58,237,.12);
 }
-
-*,*::before,*::after { box-sizing: border-box; margin:0; padding:0; }
-html { scroll-behavior: smooth; }
-
-body {
-  background: var(--night);
-  color: var(--snow);
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 15px;
-  line-height: 1.7;
-  overflow-x: hidden;
-  cursor: none;
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--snow);
+  font-family:'Space Grotesk',sans-serif;
+  font-size:15px;line-height:1.7;
+  overflow-x:hidden;cursor:none;
 }
-
-/* subtle grid */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
+body::before{
+  content:'';position:fixed;inset:0;
   background-image:
-    linear-gradient(rgba(124,58,237,.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(124,58,237,.025) 1px, transparent 1px);
-  background-size: 48px 48px;
-  pointer-events: none;
-  z-index: 0;
+    linear-gradient(rgba(124,58,237,.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(124,58,237,.022) 1px,transparent 1px);
+  background-size:52px 52px;pointer-events:none;z-index:0;
 }
 
-/* ══════════════════════════════════════════════
-   CUSTOM CURSOR
-══════════════════════════════════════════════ */
-#cur-dot,#cur-ring {
-  position: fixed;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 9999;
-  transform: translate(-50%,-50%);
-}
-#cur-dot {
-  width: 5px; height: 5px;
-  background: var(--violet);
-  box-shadow: 0 0 8px var(--violet);
-}
-#cur-ring {
-  width: 30px; height: 30px;
-  border: 1.5px solid rgba(167,139,250,.5);
-  transition: width .18s, height .18s, border-color .18s;
-}
-.cursor-hover #cur-ring {
-  width: 44px; height: 44px;
-  border-color: var(--violet);
-}
+/* ── CURSOR ─────────────────────────────────── */
+#cd,#cr{position:fixed;border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%)}
+#cd{width:5px;height:5px;background:var(--violet);box-shadow:0 0 10px var(--violet)}
+#cr{width:28px;height:28px;border:1.5px solid rgba(167,139,250,.45);transition:width .15s,height .15s,border-color .15s,opacity .15s}
+.ch #cr{width:42px;height:42px;border-color:var(--violet);opacity:.85}
 
-/* ══════════════════════════════════════════════
-   CANVAS
-══════════════════════════════════════════════ */
-#pcv {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-}
+/* ── CANVAS ──────────────────────────────────── */
+#pv{position:fixed;inset:0;z-index:0;pointer-events:none}
 
-/* ══════════════════════════════════════════════
-   PAGE WRAPPER
-══════════════════════════════════════════════ */
-.page { position: relative; z-index: 1; }
+/* ── PAGE ────────────────────────────────────── */
+.pg{position:relative;z-index:1}
 
-/* ══════════════════════════════════════════════
-   NAV
-══════════════════════════════════════════════ */
-#nav {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  z-index: 200;
-  padding: 0 32px;
-  border-bottom: 1px solid transparent;
-  transition: background .35s, border-color .35s, backdrop-filter .35s;
-}
-#nav.scrolled {
-  background: rgba(6,6,18,.82);
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
-  border-color: var(--line);
-}
-.nav-in {
-  max-width: 920px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 66px;
-}
-.nav-logo {
-  display: flex; align-items: center; gap: 9px;
-  text-decoration: none;
-  color: #fff;
-  font-weight: 700;
-  font-size: 18px;
-  letter-spacing: -.03em;
-}
-.nav-pulse {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 8px var(--green);
-  animation: blink-dot 2.2s ease infinite;
-}
-@keyframes blink-dot {
-  0%,100% { opacity:1; transform:scale(1); }
-  50%      { opacity:.3; transform:scale(.7); }
-}
-.nav-right { display:flex; align-items:center; gap:16px; }
-.nav-ver {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  color: var(--mist);
-  background: var(--card);
-  border: 1px solid var(--line);
-  padding: 4px 13px;
-  border-radius: 7px;
-}
-.nav-ver em { font-style: normal; color: var(--violet); }
-.nav-gh {
-  display: flex; align-items: center; gap: 8px;
-  color: var(--snow);
-  text-decoration: none;
-  font-size: 13px;
-  font-weight: 500;
-  padding: 8px 16px;
-  border: 1px solid var(--line2);
-  border-radius: 9px;
-  background: var(--card);
-  transition: border-color .2s, color .2s, background .2s;
-}
-.nav-gh:hover {
-  border-color: var(--purple);
-  color: var(--violet);
-  background: var(--glow-sm);
-}
+/* ── NAV ─────────────────────────────────────── */
+#nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:0 28px;border-bottom:1px solid transparent;transition:background .3s,border-color .3s}
+#nav.sc{background:rgba(5,5,13,.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-color:var(--border)}
+.ni{max-width:980px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:64px}
+.nl{display:flex;align-items:center;gap:8px;text-decoration:none;color:#fff;font-weight:700;font-size:18px;letter-spacing:-.03em}
+.nd{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:bdot 2s infinite}
+@keyframes bdot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.25;transform:scale(.65)}}
+.nr{display:flex;align-items:center;gap:14px}
+.nv{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted);background:var(--card);border:1px solid var(--border);padding:4px 13px;border-radius:7px}
+.nv em{font-style:normal;color:var(--violet)}
+.ng{display:flex;align-items:center;gap:8px;color:var(--snow);text-decoration:none;font-size:13px;font-weight:500;padding:8px 16px;border:1px solid var(--border2);border-radius:9px;background:var(--card);transition:all .2s}
+.ng:hover{border-color:var(--purple);color:var(--violet);background:var(--glow2)}
 
-/* ══════════════════════════════════════════════
-   HERO
-══════════════════════════════════════════════ */
-.hero {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-  padding: 100px 24px 64px;
-  text-align: center;
-}
-.hero::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 60% 55% at 50% 50%, rgba(124,58,237,.07) 0%, transparent 70%);
-  pointer-events: none;
-}
+/* ── HERO ────────────────────────────────────── */
+.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:100px 24px 60px;text-align:center}
+.hero::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 65% 55% at 50% 50%,rgba(124,58,237,.07) 0%,transparent 70%);pointer-events:none}
+.rw{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.ret{width:min(78vw,580px);height:min(78vw,580px);animation:rin 1.8s cubic-bezier(.22,1,.36,1) forwards}
+@keyframes rin{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+.rs{animation:cw 28s linear infinite;transform-origin:200px 200px}
+.rs2{animation:ccw 18s linear infinite;transform-origin:200px 200px}
+.rp{animation:pop 3.5s ease-in-out infinite}
+.rc{animation:cpop 2.3s ease-in-out infinite;transform-origin:200px 200px}
+@keyframes cw{to{transform:rotate(360deg)}}
+@keyframes ccw{to{transform:rotate(-360deg)}}
+@keyframes pop{0%,100%{opacity:.2}50%{opacity:.52}}
+@keyframes cpop{0%,100%{transform:scale(1);opacity:.55}50%{transform:scale(2.4);opacity:.15}}
 
-/* Targeting reticle */
-.reticle-w {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-.reticle {
-  width: min(80vw, 620px);
-  height: min(80vw, 620px);
-  animation: reticle-appear 2s cubic-bezier(.22,1,.36,1) forwards;
-}
-@keyframes reticle-appear {
-  from { opacity:0; transform:scale(.6); }
-  to   { opacity:1; transform:scale(1); }
-}
-.r-spin   { animation: cw  32s linear infinite; transform-origin:200px 200px; }
-.r-spin2  { animation: ccw 22s linear infinite; transform-origin:200px 200px; }
-.r-pulse  { animation: pop  3.5s ease-in-out infinite; }
-.r-center { animation: dot-pop 2.2s ease-in-out infinite; transform-origin:200px 200px; }
-@keyframes cw    { to { transform: rotate(360deg); } }
-@keyframes ccw   { to { transform: rotate(-360deg); } }
-@keyframes pop   { 0%,100%{opacity:.22;} 50%{opacity:.55;} }
-@keyframes dot-pop { 0%,100%{transform:scale(1);opacity:.6;} 50%{transform:scale(2.2);opacity:.2;} }
+.hc{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center}
+.heb{display:inline-flex;align-items:center;gap:9px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:22px;opacity:0;animation:fu .6s .1s ease forwards}
+.elv{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 9px var(--green);animation:bdot 2s infinite}
+.ht{font-size:clamp(86px,17vw,154px);font-weight:700;letter-spacing:-.055em;line-height:.88;margin-bottom:24px;opacity:0;animation:fu .7s .28s ease forwards}
+.gw{position:relative;display:inline-block}
+.gc{position:absolute;top:0;left:0;font-size:inherit;font-weight:inherit;letter-spacing:inherit;line-height:inherit;pointer-events:none;opacity:0;user-select:none}
+.ga{color:rgba(0,255,255,.75)}.gb{color:rgba(255,0,255,.55)}
+.gw.fx .ga{opacity:1;animation:gla .43s steps(3) forwards}
+.gw.fx .gb{opacity:1;animation:glb .43s steps(3) forwards}
+@keyframes gla{0%{clip-path:inset(4% 0 89% 0);transform:translate(-4px)}33%{clip-path:inset(44% 0 42% 0);transform:translate(4px)}66%{clip-path:inset(70% 0 14% 0);transform:translate(-3px)}100%{clip-path:inset(0 0 100% 0);opacity:0}}
+@keyframes glb{0%{clip-path:inset(60% 0 24% 0);transform:translate(4px)}33%{clip-path:inset(16% 0 70% 0);transform:translate(-4px)}66%{clip-path:inset(36% 0 50% 0);transform:translate(3px)}100%{clip-path:inset(0 0 100% 0);opacity:0}}
+.gm{display:block;background:linear-gradient(138deg,#fff 0%,var(--violet) 50%,#c084fc 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.hs{font-size:17px;color:var(--muted);max-width:400px;margin-bottom:36px;opacity:0;animation:fu .7s .45s ease forwards}
+.hcta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:56px;opacity:0;animation:fu .7s .6s ease forwards}
+.bp{display:inline-flex;align-items:center;gap:8px;background:var(--purple);color:#fff;text-decoration:none;padding:13px 26px;border-radius:11px;font-weight:600;font-size:14px;box-shadow:0 0 28px var(--glow);transition:all .2s}
+.bp:hover{background:var(--violet);transform:translateY(-2px);box-shadow:0 8px 36px var(--glow)}
+.bg{display:inline-flex;align-items:center;gap:8px;color:var(--snow);text-decoration:none;padding:13px 26px;border-radius:11px;font-weight:500;font-size:14px;border:1px solid var(--border2);background:var(--card);transition:all .2s}
+.bg:hover{border-color:var(--purple);color:var(--violet);background:var(--glow2)}
+.hst{display:flex;align-items:center;gap:40px;opacity:0;animation:fu .7s .76s ease forwards}
+.si{display:flex;flex-direction:column;align-items:center;gap:5px}
+.sn{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:600;color:#fff;line-height:1}
+.sl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+.sd{width:1px;height:36px;background:var(--border2)}
 
-/* Hero content */
-.hero-c {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.hero-eyebrow {
-  display: inline-flex; align-items: center; gap: 9px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  letter-spacing: .16em;
-  text-transform: uppercase;
-  color: var(--mist);
-  margin-bottom: 24px;
-  opacity: 0;
-  animation: fadeup .6s .15s ease forwards;
-}
-.eyebrow-live {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 8px var(--green);
-  animation: blink-dot 2s ease infinite;
-}
+/* ── STATS STRIPE ────────────────────────────── */
+.stripe{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:20px 0}
+.stripe-in{max-width:980px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px}
+.stripe-item{display:flex;align-items:center;gap:12px}
+.str-icon{width:36px;height:36px;border-radius:9px;background:rgba(124,58,237,.14);border:1px solid rgba(124,58,237,.22);display:flex;align-items:center;justify-content:center;font-size:16px}
+.str-text{display:flex;flex-direction:column}
+.str-val{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;color:#fff}
+.str-lbl{font-size:12px;color:var(--muted)}
+.stripe-div{width:1px;height:32px;background:var(--border)}
 
-/* Title with glitch */
-.hero-title {
-  font-size: clamp(88px, 19vw, 168px);
-  font-weight: 700;
-  letter-spacing: -.055em;
-  line-height: .88;
-  margin-bottom: 26px;
-  opacity: 0;
-  animation: fadeup .75s .3s ease forwards;
-}
-.glitch-w {
-  position: relative;
-  display: inline-block;
-}
-.glitch-w .g-clone {
-  position: absolute;
-  top: 0; left: 0;
-  font-size: inherit; font-weight: inherit;
-  letter-spacing: inherit; line-height: inherit;
-  pointer-events: none;
-  opacity: 0;
-  user-select: none;
-}
-.g-a { color: rgba(0,255,255,.75); }
-.g-b { color: rgba(255,0,255,.55); }
-.glitch-w.fire .g-a {
-  opacity: 1;
-  animation: ga .44s steps(3) forwards;
-}
-.glitch-w.fire .g-b {
-  opacity: 1;
-  animation: gb .44s steps(3) forwards;
-}
-@keyframes ga {
-  0%   { clip-path:inset(5% 0 88% 0);  transform:translate(-4px,0); }
-  33%  { clip-path:inset(45% 0 42% 0); transform:translate(4px,0); }
-  66%  { clip-path:inset(72% 0 12% 0); transform:translate(-3px,0); }
-  100% { clip-path:inset(0 0 100% 0);  opacity:0; }
-}
-@keyframes gb {
-  0%   { clip-path:inset(62% 0 22% 0); transform:translate(4px,0); }
-  33%  { clip-path:inset(18% 0 72% 0); transform:translate(-4px,0); }
-  66%  { clip-path:inset(38% 0 48% 0); transform:translate(3px,0); }
-  100% { clip-path:inset(0 0 100% 0);  opacity:0; }
-}
-.glitch-main {
-  display: block;
-  background: linear-gradient(138deg, #fff 0%, var(--violet) 52%, #c084fc 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
+/* ── TICKER ──────────────────────────────────── */
+.tk-outer{overflow:hidden;border-bottom:1px solid var(--border);padding:12px 0;background:rgba(9,9,26,.6)}
+.tk-track{display:flex;gap:52px;white-space:nowrap;width:max-content;animation:tscroll 22s linear infinite}
+.tk-item{display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--dim);letter-spacing:.05em}
+.tk-dot{width:3px;height:3px;border-radius:50%;background:var(--purple);opacity:.6}
+@keyframes tscroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 
-.hero-sub {
-  font-size: 17px;
-  color: var(--mist);
-  max-width: 400px;
-  margin-bottom: 38px;
-  opacity: 0;
-  animation: fadeup .7s .48s ease forwards;
-}
+/* ── SECTION BASE ────────────────────────────── */
+.rev{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .7s ease}
+.rev.on{opacity:1;transform:translateY(0)}
+.sw{max-width:980px;margin:0 auto;padding:0 24px}
+.sh{margin-bottom:42px}
+.slb{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--violet);margin-bottom:10px}
+.sh h2{font-size:34px;font-weight:700;letter-spacing:-.03em;color:#fff;line-height:1.15}
+.sh p{font-size:15px;color:var(--muted);margin-top:10px;max-width:520px}
 
-/* CTAs */
-.hero-cta {
-  display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
-  margin-bottom: 60px;
-  opacity: 0;
-  animation: fadeup .7s .62s ease forwards;
+/* ── FEATURES BENTO ──────────────────────────── */
+.feat-sec{padding:100px 0}
+.bento{display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:auto auto;gap:14px}
+.bc{
+  position:relative;background:var(--card);
+  border:1px solid var(--border);border-radius:20px;
+  padding:32px 28px;overflow:hidden;cursor:default;
+  transition:border-color .3s,transform .3s,box-shadow .3s;
 }
-.btn-p {
-  display: inline-flex; align-items: center; gap: 7px;
-  background: var(--purple);
-  color: #fff;
-  text-decoration: none;
-  padding: 13px 26px;
-  border-radius: 11px;
-  font-weight: 600; font-size: 14px;
-  box-shadow: 0 0 28px var(--glow);
-  transition: background .2s, transform .2s, box-shadow .2s;
-}
-.btn-p:hover { background: var(--violet); transform:translateY(-2px); box-shadow:0 6px 36px var(--glow); }
-.btn-g {
-  display: inline-flex; align-items: center; gap: 7px;
-  color: var(--snow);
-  text-decoration: none;
-  padding: 13px 26px;
-  border-radius: 11px;
-  font-weight: 500; font-size: 14px;
-  border: 1px solid var(--line2);
-  background: var(--card);
-  transition: border-color .2s, color .2s, background .2s;
-}
-.btn-g:hover { border-color: var(--purple); color: var(--violet); background: var(--glow-sm); }
+.bc::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 20%,rgba(124,58,237,.09) 0%,transparent 65%);opacity:0;transition:opacity .3s}
+.bc:hover::before{opacity:1}
+.bc:hover{border-color:rgba(124,58,237,.4);transform:translateY(-4px);box-shadow:0 14px 48px rgba(124,58,237,.1)}
+.bc.wide{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:32px;background:linear-gradient(135deg,#0f0f22 0%,#111128 100%);border-color:rgba(124,58,237,.2)}
+.bc.wide:hover{border-color:rgba(124,58,237,.5);box-shadow:0 16px 60px rgba(124,58,237,.14)}
+.bc.wide::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 80% at 80% 50%,rgba(124,58,237,.07) 0%,transparent 60%);pointer-events:none}
+.bi{width:48px;height:48px;border-radius:14px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.22);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:20px}
+.bc h3{font-size:16px;font-weight:700;color:#fff;margin-bottom:9px;letter-spacing:-.01em}
+.bc p{font-size:13.5px;color:var(--muted);line-height:1.65}
+.wide-text .bi{width:44px;height:44px;border-radius:12px;font-size:20px;margin-bottom:16px}
+.wide-text h3{font-size:20px;letter-spacing:-.02em}
+.wide-text p{font-size:14px;max-width:380px}
+.wide-visual{position:relative;z-index:1;display:flex;flex-direction:column;gap:8px;padding:20px;background:rgba(0,0,0,.25);border-radius:14px;border:1px solid rgba(124,58,237,.15);font-family:'JetBrains Mono',monospace;font-size:12px}
+.wv-line{display:flex;align-items:center;gap:8px;color:var(--muted)}
+.wv-line .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dot-green{background:var(--green);box-shadow:0 0 6px var(--green)}
+.dot-amber{background:var(--amber);box-shadow:0 0 6px var(--amber)}
+.dot-purple{background:var(--violet);box-shadow:0 0 6px var(--violet)}
+.wv-line span{color:var(--snow)}
+.sync-badge{display:inline-flex;align-items:center;gap:7px;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2);padding:4px 12px;border-radius:6px;font-size:11px;color:var(--green);margin-top:4px}
+.sync-spin{width:10px;height:10px;border:1.5px solid rgba(74,222,128,.3);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-/* Stats bar */
-.hero-stats {
-  display: flex; align-items: center; gap: 36px;
-  opacity: 0;
-  animation: fadeup .7s .78s ease forwards;
-}
-.stat-item { display:flex; flex-direction:column; align-items:center; gap:4px; }
-.stat-num {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 26px; font-weight: 600;
-  color: #fff; line-height: 1;
-}
-.stat-lbl {
-  font-size: 11px; color: var(--mist);
-  text-transform: uppercase; letter-spacing: .1em;
-}
-.stat-div { width:1px; height:34px; background: var(--line2); }
+/* ── TERMINAL ────────────────────────────────── */
+.term-sec{padding:0 0 100px}
+.term-wrap{background:#07070f;border:1px solid var(--border);border-radius:18px;overflow:hidden;max-width:740px;margin:0 auto;box-shadow:0 24px 80px rgba(0,0,0,.5),0 0 60px rgba(124,58,237,.08)}
+.term-top{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02)}
+.tdots{display:flex;gap:7px}
+.tdots i{display:block;width:12px;height:12px;border-radius:50%}
+.td1{background:#ff5f57}.td2{background:#febc2e}.td3{background:#28c840}
+.tname{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--dim)}
+.term-body{padding:24px 26px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:2;min-height:220px}
+.tline{display:flex;align-items:flex-start;gap:10px;opacity:0;animation:fadein .2s ease forwards}
+.tprompt{color:var(--violet);flex-shrink:0}
+.tcmd{color:#e8e8f8}
+.tinfo{color:var(--muted)}
+.tok{color:var(--green)}
+.terr{color:#f87171}
+.tcursor{display:inline-block;width:8px;height:14px;background:var(--violet);vertical-align:middle;animation:blink .85s step-end infinite;margin-left:2px}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes fadein{to{opacity:1}}
 
-/* ══════════════════════════════════════════════
-   TICKER
-══════════════════════════════════════════════ */
-.ticker-outer {
-  overflow: hidden;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  background: var(--ink);
-  padding: 14px 0;
-}
-.ticker-track {
-  display: flex;
-  gap: 56px;
-  white-space: nowrap;
-  width: max-content;
-  animation: tick 24s linear infinite;
-}
-.ticker-item {
-  display: flex; align-items: center; gap: 10px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  color: var(--dim);
-  letter-spacing: .06em;
-}
-.ticker-item .t-dot {
-  width: 4px; height: 4px;
-  border-radius: 50%;
-  background: var(--purple);
-  opacity: .7;
-}
-@keyframes tick { 0%{transform:translateX(0);} 100%{transform:translateX(-50%);} }
+/* ── RELEASES ────────────────────────────────── */
+.rel-sec{padding:0 0 100px}
+.rtabs{display:flex;gap:8px;margin-bottom:18px}
+.rtab{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:11px;padding:10px 18px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted);cursor:pointer;transition:all .2s}
+.rtab:hover{border-color:var(--purple);color:var(--snow)}
+.rtab.on{border-color:var(--purple);background:rgba(124,58,237,.13);color:#fff}
+.rbg{font-size:10px;padding:2px 8px;border-radius:5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+.rbs{background:rgba(74,222,128,.13);color:#86efac}
+.rbe{background:rgba(251,191,36,.13);color:#fcd34d}
+.cb{background:#07070f;border:1px solid var(--border);border-radius:16px;overflow:hidden}
+.ctop{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.018)}
+.wd{display:flex;gap:7px}
+.wd i{display:block;width:12px;height:12px;border-radius:50%}
+.w1{background:#ff5f57}.w2{background:#febc2e}.w3{background:#28c840}
+.cfn{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim)}
+.cpb{background:rgba(124,58,237,.16);border:1px solid rgba(124,58,237,.3);color:var(--violet);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.05em;padding:5px 14px;border-radius:7px;cursor:pointer;transition:all .2s}
+.cpb:hover{background:rgba(124,58,237,.3)}.cpb.ok{color:#86efac;border-color:rgba(74,222,128,.4)}
+.cbod{padding:22px 24px;font-family:'JetBrains Mono',monospace;font-size:13.5px;line-height:1.9;overflow-x:auto;white-space:pre}
+.kw{color:#c084fc}.fn{color:#818cf8}.st{color:#6ee7b7}.cm{color:var(--dim);font-style:italic}
+.tp{display:none}.tp.on{display:block}
 
-/* ══════════════════════════════════════════════
-   SECTION SCAFFOLD
-══════════════════════════════════════════════ */
-.reveal {
-  opacity: 0;
-  transform: translateY(32px);
-  transition: opacity .75s ease, transform .75s ease;
-}
-.reveal.on { opacity:1; transform:translateY(0); }
+/* ── USAGE STEPS ─────────────────────────────── */
+.use-sec{padding:0 0 100px}
+.steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.sc-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:30px 26px;transition:border-color .3s,transform .3s}
+.sc-card:hover{border-color:rgba(124,58,237,.38);transform:translateY(-3px)}
+.snum{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--violet);background:rgba(124,58,237,.14);border:1px solid rgba(124,58,237,.22);border-radius:9px;padding:3px 11px;display:inline-flex;align-items:center;margin-bottom:18px}
+.sc-card h4{font-size:16px;font-weight:600;color:#fff;margin-bottom:8px}
+.sc-card p{font-size:13.5px;color:var(--muted);line-height:1.6}
+.sc-card code{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--violet);background:rgba(124,58,237,.1);padding:1px 6px;border-radius:4px}
 
-.sw {
-  max-width: 920px;
-  margin: 0 auto;
-  padding: 0 24px;
-}
-.sh { margin-bottom: 38px; }
-.sl {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px; letter-spacing: .16em;
-  text-transform: uppercase;
-  color: var(--violet);
-  margin-bottom: 10px;
-}
-.sh h2 {
-  font-size: 32px; font-weight: 700;
-  letter-spacing: -.03em;
-  color: #fff;
-}
+/* ── FILE TREE ───────────────────────────────── */
+.tree-sec{padding:0 0 100px}
+.ttbar{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.tmeta{flex:1;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--dim)}
+.tmeta em{font-style:normal;color:var(--violet)}
+.tsearch{background:var(--card);border:1px solid var(--border);border-radius:9px;color:var(--snow);font-family:'JetBrains Mono',monospace;font-size:12px;padding:8px 14px;outline:none;width:210px;transition:border-color .2s}
+.tsearch:focus{border-color:var(--purple)}
+.tsearch::placeholder{color:var(--dim)}
+.tbox{background:#07070f;border:1px solid var(--border);border-radius:16px;padding:22px 24px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:2.1;min-height:200px}
+.tdir{color:var(--violet);font-weight:600}
+.tmain{color:var(--snow)}
+.tfile{color:#7a7aa0}
+.trow{display:flex;align-items:center;gap:12px;opacity:0;animation:fadein .25s ease forwards}
+.trow:hover .tfile{color:var(--snow)}
+.tbg{font-size:9px;padding:1px 7px;border-radius:4px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.tbl{background:rgba(124,58,237,.2);color:var(--violet)}
+.tbs{background:rgba(74,222,128,.14);color:#86efac}
+.tbr{background:rgba(34,211,238,.13);color:#67e8f9}
+.tloading{display:flex;align-items:center;gap:10px;color:var(--dim);padding:24px 0}
+.tspin{width:14px;height:14px;border:1.5px solid var(--border2);border-top-color:var(--violet);border-radius:50%;animation:spin .55s linear infinite}
 
-/* ══════════════════════════════════════════════
-   FEATURES
-══════════════════════════════════════════════ */
-.feat-sec { padding: 96px 0; }
-.feat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px,1fr));
-  gap: 14px;
-}
-.feat-card {
-  position: relative;
-  background: var(--ink);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 28px 24px;
-  overflow: hidden;
-  cursor: default;
-  transition: border-color .3s, transform .3s, box-shadow .3s;
-}
-.feat-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 25% 25%, rgba(124,58,237,.08) 0%, transparent 60%);
-  opacity: 0;
-  transition: opacity .3s;
-}
-.feat-card:hover::before { opacity: 1; }
-.feat-card:hover {
-  border-color: rgba(124,58,237,.45);
-  transform: translateY(-5px);
-  box-shadow: 0 16px 48px rgba(124,58,237,.1);
-}
-.feat-icon {
-  width: 46px; height: 46px;
-  border-radius: 13px;
-  background: rgba(124,58,237,.14);
-  border: 1px solid rgba(124,58,237,.2);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 21px;
-  margin-bottom: 18px;
-}
-.feat-card h3 { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 8px; }
-.feat-card p  { font-size: 13px; color: var(--mist); line-height: 1.6; }
+/* ── NOTICE ──────────────────────────────────── */
+.notc-sec{padding:0 0 100px}
+.notc{background:rgba(239,68,68,.055);border:1px solid rgba(239,68,68,.2);border-radius:16px;padding:24px 26px;display:flex;gap:18px;align-items:flex-start}
+.ni2{font-size:22px;flex-shrink:0;margin-top:2px}
+.notc h4{font-size:14px;font-weight:600;color:#fca5a5;margin-bottom:6px}
+.notc p{font-size:13px;color:#f87171;line-height:1.6}
 
-/* ══════════════════════════════════════════════
-   RELEASES
-══════════════════════════════════════════════ */
-.rel-sec { padding: 0 0 96px; }
-.rel-tabs { display:flex; gap:8px; margin-bottom:18px; }
-.rtab {
-  display: flex; align-items: center; gap: 10px;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 11px;
-  padding: 10px 18px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  color: var(--mist);
-  cursor: pointer;
-  transition: all .2s;
-}
-.rtab:hover { border-color: var(--purple); color: var(--snow); }
-.rtab.on    { border-color: var(--purple); background: rgba(124,58,237,.12); color: #fff; }
-.rbadge {
-  font-size: 10px; padding: 2px 8px;
-  border-radius: 5px; font-weight: 600;
-  letter-spacing: .05em; text-transform: uppercase;
-}
-.rb-s { background: rgba(34,197,94,.14);  color: #86efac; }
-.rb-e { background: rgba(245,158,11,.14); color: #fcd34d; }
+/* ── FOOTER ──────────────────────────────────── */
+footer{border-top:1px solid var(--border);padding:48px 24px 52px}
+.fi{max-width:980px;margin:0 auto;text-align:center}
+.flogo{font-size:22px;font-weight:700;letter-spacing:-.04em;color:#fff;margin-bottom:14px}
+.flinks{display:flex;gap:24px;justify-content:center;margin-bottom:20px;flex-wrap:wrap}
+.flinks a{color:var(--muted);text-decoration:none;font-size:13px;transition:color .2s}
+.flinks a:hover{color:var(--violet)}
+.fcopy{font-size:12px;color:var(--dim)}
 
-/* Code block */
-.cblock {
-  background: #07070e;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  overflow: hidden;
+/* ── UTILS ───────────────────────────────────── */
+@keyframes fu{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+@media(max-width:760px){
+  body{cursor:auto}#cd,#cr{display:none}
+  .ht{font-size:70px}.bento{grid-template-columns:1fr}.bc.wide{grid-template-columns:1fr}
+  .steps-grid{grid-template-columns:1fr}.stripe-div{display:none}
+  .wide-visual{display:none}
 }
-.ctop {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 18px;
-  border-bottom: 1px solid var(--line);
-  background: rgba(255,255,255,.018);
-}
-.wdots { display:flex; gap:7px; }
-.wdots i { display:block; width:12px; height:12px; border-radius:50%; }
-.wd1 { background:#ff5f57; } .wd2 { background:#febc2e; } .wd3 { background:#28c840; }
-.cfname {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px; color: var(--dim);
-}
-.cpybtn {
-  background: rgba(124,58,237,.16);
-  border: 1px solid rgba(124,58,237,.3);
-  color: var(--violet);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px; letter-spacing: .05em;
-  padding: 5px 14px; border-radius: 7px;
-  cursor: pointer;
-  transition: all .2s;
-}
-.cpybtn:hover { background: rgba(124,58,237,.3); }
-.cpybtn.ok { color: #86efac; border-color: rgba(34,197,94,.4); }
-.cbody {
-  padding: 22px 24px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13.5px; line-height: 1.85;
-  overflow-x: auto;
-  white-space: pre;
-}
-.tk-kw  { color: #c084fc; }
-.tk-fn  { color: #818cf8; }
-.tk-str { color: #6ee7b7; }
-.tk-cm  { color: var(--dim); font-style: italic; }
-
-.tpanel { display:none; }
-.tpanel.on { display:block; }
-
-/* ══════════════════════════════════════════════
-   USAGE STEPS
-══════════════════════════════════════════════ */
-.steps-sec { padding: 0 0 96px; }
-.steps-list { position: relative; display:flex; flex-direction:column; }
-.steps-list::before {
-  content: '';
-  position: absolute;
-  left: 20px; top: 20px; bottom: 20px;
-  width: 1px;
-  background: linear-gradient(to bottom, var(--purple), transparent);
-}
-.step-item { display:flex; gap:22px; padding:18px 16px 18px 0; }
-.step-n {
-  flex-shrink: 0;
-  width: 40px; height: 40px;
-  border-radius: 11px;
-  background: rgba(124,58,237,.14);
-  border: 1px solid var(--purple);
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px; font-weight: 600;
-  color: var(--violet);
-  position: relative; z-index: 1;
-}
-.step-b { padding-top: 7px; }
-.step-b h4 { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 5px; }
-.step-b p  { font-size: 13px; color: var(--mist); }
-.step-b code {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  color: var(--violet);
-  background: rgba(124,58,237,.1);
-  padding: 1px 6px;
-  border-radius: 4px;
-}
-
-/* ══════════════════════════════════════════════
-   NOTICE
-══════════════════════════════════════════════ */
-.notice-sec { padding: 0 0 96px; }
-.notice-card {
-  background: rgba(239,68,68,.06);
-  border: 1px solid rgba(239,68,68,.22);
-  border-radius: 16px;
-  padding: 24px 26px;
-  display: flex; gap: 18px; align-items: flex-start;
-}
-.n-icon { font-size: 22px; flex-shrink:0; margin-top:2px; }
-.notice-card h4 { font-size: 14px; font-weight: 600; color: #fca5a5; margin-bottom: 6px; }
-.notice-card p  { font-size: 13px; color: #f87171; line-height: 1.6; }
-
-/* ══════════════════════════════════════════════
-   FILE TREE
-══════════════════════════════════════════════ */
-.tree-sec { padding: 0 0 96px; }
-.tree-toolbar {
-  display: flex; align-items: center; gap:12px;
-  margin-bottom: 14px; flex-wrap: wrap;
-}
-.tree-meta {
-  flex: 1;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px; color: var(--dim);
-}
-.tree-meta em { font-style: normal; color: var(--violet); }
-.tree-search {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  color: var(--snow);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  padding: 8px 14px;
-  outline: none;
-  width: 210px;
-  transition: border-color .2s;
-}
-.tree-search:focus { border-color: var(--purple); }
-.tree-search::placeholder { color: var(--dim); }
-.tree-box {
-  background: #07070e;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 22px 24px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px; line-height: 2.05;
-  min-height: 220px;
-}
-.tree-dir  { color: var(--violet); font-weight: 600; }
-.tree-main { color: var(--snow); }
-.tree-file { color: #8899aa; }
-.tree-row {
-  display: flex; align-items: center; gap: 12px;
-  opacity: 0;
-  animation: fadein .25s ease forwards;
-  transition: color .15s;
-}
-.tree-row:hover .tree-file { color: var(--snow); }
-.tree-row:hover .tree-main { color: #fff; }
-.tbadge {
-  font-size: 9px; padding: 1px 7px;
-  border-radius: 4px; font-weight: 600;
-  text-transform: uppercase; letter-spacing: .05em;
-  flex-shrink: 0;
-}
-.tb-l { background: rgba(124,58,237,.2);  color: var(--violet); }
-.tb-s { background: rgba(34,197,94,.15);  color: #86efac; }
-.tb-r { background: rgba(45,212,191,.15); color: #5eead4; }
-.tree-loading {
-  display: flex; align-items: center; gap: 10px;
-  color: var(--dim); padding: 24px 0;
-}
-.t-spin {
-  width: 15px; height: 15px;
-  border: 1.5px solid var(--line2);
-  border-top-color: var(--violet);
-  border-radius: 50%;
-  animation: spin .55s linear infinite;
-}
-@keyframes spin { to { transform:rotate(360deg); } }
-
-/* ══════════════════════════════════════════════
-   FOOTER
-══════════════════════════════════════════════ */
-footer {
-  border-top: 1px solid var(--line);
-  padding: 46px 24px 52px;
-}
-.footer-in {
-  max-width: 920px; margin: 0 auto;
-  text-align: center;
-}
-.footer-logo {
-  font-size: 24px; font-weight: 700;
-  letter-spacing: -.04em;
-  color: #fff; margin-bottom: 14px;
-}
-.footer-links {
-  display: flex; gap: 24px; justify-content: center;
-  margin-bottom: 22px; flex-wrap: wrap;
-}
-.footer-links a {
-  color: var(--mist); text-decoration: none;
-  font-size: 13px; transition: color .2s;
-}
-.footer-links a:hover { color: var(--violet); }
-.footer-copy { font-size: 12px; color: var(--dim); }
-
-/* ══════════════════════════════════════════════
-   SHARED ANIMATIONS
-══════════════════════════════════════════════ */
-@keyframes fadeup  { from{opacity:0;transform:translateY(22px);} to{opacity:1;transform:translateY(0);} }
-@keyframes fadein  { to{opacity:1;} }
-
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
-}
-@media (max-width: 600px) {
-  body { cursor: auto; }
-  #cur-dot, #cur-ring { display: none; }
-  .hero-title { font-size: 72px; }
-  .nav-ver { display: none; }
-}
+@media(max-width:540px){.nr .nv{display:none}}
 </style>
 </head>
 <body>
 
-<!-- Custom cursor -->
-<div id="cur-dot"></div>
-<div id="cur-ring"></div>
+<div id="cd"></div><div id="cr"></div>
+<canvas id="pv"></canvas>
 
-<!-- Particle background -->
-<canvas id="pcv"></canvas>
+<div class="pg">
 
-<div class="page">
-
-<!-- ═══ NAV ═══════════════════════════════════ -->
 <nav id="nav">
-  <div class="nav-in">
-    <a href="#" class="nav-logo">
-      kaim
-      <span class="nav-pulse"></span>
-    </a>
-    <div class="nav-right">
-      <div class="nav-ver">latest: <em id="nver">—</em></div>
-      <a href="https://github.com/sdwird/kaim" target="_blank" rel="noopener" class="nav-gh">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.341-3.369-1.341-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
-        </svg>
+  <div class="ni">
+    <a href="#" class="nl">kaim<span class="nd"></span></a>
+    <div class="nr">
+      <div class="nv">latest: <em id="nver">—</em></div>
+      <a href="https://github.com/sdwird/kaim" target="_blank" rel="noopener" class="ng">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.341-3.369-1.341-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
         GitHub
       </a>
     </div>
   </div>
 </nav>
 
-<!-- ═══ HERO ══════════════════════════════════ -->
 <section class="hero">
-  <div class="reticle-w">
-    <svg class="reticle" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <!-- static outer halo -->
+  <div class="rw">
+    <svg class="ret" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <circle cx="200" cy="200" r="188" fill="none" stroke="rgba(124,58,237,.04)" stroke-width="1"/>
-      <!-- spinning dashed ring -->
-      <g class="r-spin">
-        <circle cx="200" cy="200" r="168" fill="none" stroke="rgba(124,58,237,.13)" stroke-width="1" stroke-dasharray="20 10"/>
-      </g>
-      <!-- pulsing solid ring -->
-      <circle cx="200" cy="200" r="124" fill="none" stroke="rgba(124,58,237,.18)" stroke-width="1.2" class="r-pulse"/>
-      <!-- counter-spinning inner ring -->
-      <g class="r-spin2">
-        <circle cx="200" cy="200" r="78" fill="none" stroke="rgba(124,58,237,.2)" stroke-width="1" stroke-dasharray="9 7"/>
-      </g>
-      <!-- crosshair arms -->
-      <line x1="200" y1="22"  x2="200" y2="122" stroke="rgba(124,58,237,.28)" stroke-width="1.5"/>
-      <line x1="200" y1="278" x2="200" y2="378" stroke="rgba(124,58,237,.28)" stroke-width="1.5"/>
-      <line x1="22"  y1="200" x2="122" y2="200" stroke="rgba(124,58,237,.28)" stroke-width="1.5"/>
-      <line x1="278" y1="200" x2="378" y2="200" stroke="rgba(124,58,237,.28)" stroke-width="1.5"/>
-      <!-- tick marks at cardinal points -->
-      <line x1="200" y1="14"  x2="200" y2="26"  stroke="rgba(124,58,237,.45)" stroke-width="2"/>
+      <g class="rs"><circle cx="200" cy="200" r="166" fill="none" stroke="rgba(124,58,237,.12)" stroke-width="1" stroke-dasharray="20 10"/></g>
+      <circle cx="200" cy="200" r="122" fill="none" stroke="rgba(124,58,237,.16)" stroke-width="1.2" class="rp"/>
+      <g class="rs2"><circle cx="200" cy="200" r="76" fill="none" stroke="rgba(124,58,237,.2)" stroke-width="1" stroke-dasharray="8 6"/></g>
+      <line x1="200" y1="22" x2="200" y2="124" stroke="rgba(124,58,237,.28)" stroke-width="1.5"/>
+      <line x1="200" y1="276" x2="200" y2="378" stroke="rgba(124,58,237,.28)" stroke-width="1.5"/>
+      <line x1="22" y1="200" x2="124" y2="200" stroke="rgba(124,58,237,.28)" stroke-width="1.5"/>
+      <line x1="276" y1="200" x2="378" y2="200" stroke="rgba(124,58,237,.28)" stroke-width="1.5"/>
+      <line x1="200" y1="14" x2="200" y2="26" stroke="rgba(124,58,237,.45)" stroke-width="2"/>
       <line x1="200" y1="374" x2="200" y2="386" stroke="rgba(124,58,237,.45)" stroke-width="2"/>
-      <line x1="14"  y1="200" x2="26"  y2="200" stroke="rgba(124,58,237,.45)" stroke-width="2"/>
+      <line x1="14" y1="200" x2="26" y2="200" stroke="rgba(124,58,237,.45)" stroke-width="2"/>
       <line x1="374" y1="200" x2="386" y2="200" stroke="rgba(124,58,237,.45)" stroke-width="2"/>
-      <!-- range ticks at 45° diagonals -->
-      <line x1="142" y1="142" x2="152" y2="152" stroke="rgba(124,58,237,.22)" stroke-width="1"/>
-      <line x1="258" y1="142" x2="248" y2="152" stroke="rgba(124,58,237,.22)" stroke-width="1"/>
-      <line x1="142" y1="258" x2="152" y2="248" stroke="rgba(124,58,237,.22)" stroke-width="1"/>
-      <line x1="258" y1="258" x2="248" y2="248" stroke="rgba(124,58,237,.22)" stroke-width="1"/>
-      <!-- corner brackets -->
-      <path d="M54,26 L26,26 L26,54"  fill="none" stroke="rgba(124,58,237,.32)" stroke-width="1.8"/>
-      <path d="M346,26 L374,26 L374,54" fill="none" stroke="rgba(124,58,237,.32)" stroke-width="1.8"/>
-      <path d="M54,374 L26,374 L26,346" fill="none" stroke="rgba(124,58,237,.32)" stroke-width="1.8"/>
-      <path d="M346,374 L374,374 L374,346" fill="none" stroke="rgba(124,58,237,.32)" stroke-width="1.8"/>
-      <!-- center mark -->
-      <line x1="191" y1="200" x2="209" y2="200" stroke="rgba(124,58,237,.65)" stroke-width="1.8"/>
-      <line x1="200" y1="191" x2="200" y2="209" stroke="rgba(124,58,237,.65)" stroke-width="1.8"/>
-      <circle cx="200" cy="200" r="2.8" fill="rgba(124,58,237,.55)" class="r-center"/>
-      <!-- compass labels -->
-      <text x="196" y="9"   font-family="JetBrains Mono,monospace" font-size="7.5" fill="rgba(124,58,237,.38)">N</text>
-      <text x="196" y="399" font-family="JetBrains Mono,monospace" font-size="7.5" fill="rgba(124,58,237,.38)">S</text>
-      <text x="1"   y="203" font-family="JetBrains Mono,monospace" font-size="7.5" fill="rgba(124,58,237,.38)">W</text>
-      <text x="389" y="203" font-family="JetBrains Mono,monospace" font-size="7.5" fill="rgba(124,58,237,.38)">E</text>
+      <path d="M52,28 L28,28 L28,52" fill="none" stroke="rgba(124,58,237,.32)" stroke-width="1.8"/>
+      <path d="M348,28 L372,28 L372,52" fill="none" stroke="rgba(124,58,237,.32)" stroke-width="1.8"/>
+      <path d="M52,372 L28,372 L28,348" fill="none" stroke="rgba(124,58,237,.32)" stroke-width="1.8"/>
+      <path d="M348,372 L372,372 L372,348" fill="none" stroke="rgba(124,58,237,.32)" stroke-width="1.8"/>
+      <line x1="192" y1="200" x2="208" y2="200" stroke="rgba(124,58,237,.65)" stroke-width="1.8"/>
+      <line x1="200" y1="192" x2="200" y2="208" stroke="rgba(124,58,237,.65)" stroke-width="1.8"/>
+      <circle cx="200" cy="200" r="2.8" fill="rgba(124,58,237,.5)" class="rc"/>
+      <text x="196" y="9" font-family="JetBrains Mono,monospace" font-size="7.5" fill="rgba(124,58,237,.35)">N</text>
+      <text x="196" y="399" font-family="JetBrains Mono,monospace" font-size="7.5" fill="rgba(124,58,237,.35)">S</text>
+      <text x="1" y="203" font-family="JetBrains Mono,monospace" font-size="7.5" fill="rgba(124,58,237,.35)">W</text>
+      <text x="389" y="203" font-family="JetBrains Mono,monospace" font-size="7.5" fill="rgba(124,58,237,.35)">E</text>
     </svg>
   </div>
-
-  <div class="hero-c">
-    <div class="hero-eyebrow">
-      <span class="eyebrow-live"></span>
-      Lua · Roblox Executor · PC Only
-    </div>
-
-    <h1 class="hero-title">
-      <span class="glitch-w">
-        <span class="g-clone g-a">kaim</span>
-        <span class="g-clone g-b">kaim</span>
-        <span class="glitch-main">kaim</span>
-      </span>
+  <div class="hc">
+    <div class="heb"><span class="elv"></span>Lua · Roblox Executor · PC Only</div>
+    <h1 class="ht">
+      <span class="gw"><span class="gc ga">kaim</span><span class="gc gb">kaim</span><span class="gm">kaim</span></span>
     </h1>
-
-    <p class="hero-sub">Precision aimbot script. One loadstring, instant activation, always current.</p>
-
-    <div class="hero-cta">
-      <a href="#releases" class="btn-p">Get the Script ↓</a>
-      <a href="https://github.com/sdwird/kaim" target="_blank" rel="noopener" class="btn-g">View on GitHub ↗</a>
+    <p class="hs">Precision aimbot script. One loadstring, instant activation, always current.</p>
+    <div class="hcta">
+      <a href="#releases" class="bp">Get the Script ↓</a>
+      <a href="https://github.com/sdwird/kaim" target="_blank" rel="noopener" class="bg">View on GitHub ↗</a>
     </div>
-
-    <div class="hero-stats">
-      <div class="stat-item"><span class="stat-num" id="s-stars">—</span><span class="stat-lbl">Stars</span></div>
-      <span class="stat-div"></span>
-      <div class="stat-item"><span class="stat-num" id="s-forks">—</span><span class="stat-lbl">Forks</span></div>
-      <span class="stat-div"></span>
-      <div class="stat-item"><span class="stat-num" id="s-vers">—</span><span class="stat-lbl">Versions</span></div>
+    <div class="hst">
+      <div class="si"><span class="sn" id="ss">—</span><span class="sl">Stars</span></div>
+      <span class="sd"></span>
+      <div class="si"><span class="sn" id="sf">—</span><span class="sl">Forks</span></div>
+      <span class="sd"></span>
+      <div class="si"><span class="sn" id="sv">—</span><span class="sl">Versions</span></div>
     </div>
   </div>
 </section>
 
-<!-- ═══ TICKER ════════════════════════════════ -->
-<div class="ticker-outer">
-  <div class="ticker-track" id="ticker"></div>
+<div class="stripe">
+  <div class="stripe-in">
+    <div class="stripe-item"><div class="str-icon">🎯</div><div class="str-text"><span class="str-val">Lua 5.1</span><span class="str-lbl">Language</span></div></div>
+    <div class="stripe-div"></div>
+    <div class="stripe-item"><div class="str-icon">💻</div><div class="str-text"><span class="str-val">PC Only</span><span class="str-lbl">Platform</span></div></div>
+    <div class="stripe-div"></div>
+    <div class="stripe-item"><div class="str-icon">⚡</div><div class="str-text"><span class="str-val">1 Line</span><span class="str-lbl">Setup</span></div></div>
+    <div class="stripe-div"></div>
+    <div class="stripe-item"><div class="str-icon">🔄</div><div class="str-text"><span class="str-val">Auto-Updated</span><span class="str-lbl">From GitHub</span></div></div>
+    <div class="stripe-div"></div>
+    <div class="stripe-item"><div class="str-icon">📦</div><div class="str-text"><span class="str-val" id="stripe-vers">9+</span><span class="str-lbl">Versions</span></div></div>
+  </div>
 </div>
 
-<!-- ═══ FEATURES ══════════════════════════════ -->
-<section class="feat-sec reveal">
+<div class="tk-outer"><div class="tk-track" id="tkr"></div></div>
+
+<section class="feat-sec rev">
   <div class="sw">
     <div class="sh">
-      <div class="sl">// capabilities</div>
-      <h2>What kaim does</h2>
+      <div class="slb">// why kaim</div>
+      <h2>Everything you need.<br>Nothing you don't.</h2>
+      <p>Built lean, runs fast. Every feature is here for a reason.</p>
     </div>
-    <div class="feat-grid">
-      <div class="feat-card">
-        <div class="feat-icon">🎯</div>
-        <h3>Precision Aimbot</h3>
-        <p>Fast, accurate target acquisition with configurable behaviour for supported Roblox environments.</p>
+    <div class="bento">
+
+      <div class="bc">
+        <div class="bi">🎯</div>
+        <h3>Precision Targeting</h3>
+        <p>Fast, accurate target lock built for Roblox executor environments. Configurable sensitivity and behavior.</p>
       </div>
-      <div class="feat-card">
-        <div class="feat-icon">⚡</div>
-        <h3>One-Line Setup</h3>
-        <p>Single <code>loadstring</code> — paste into any compatible executor, run, and you're live.</p>
+
+      <div class="bc">
+        <div class="bi">⚡</div>
+        <h3>One-Line Activation</h3>
+        <p>A single <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--violet);background:rgba(124,58,237,.1);padding:1px 5px;border-radius:4px">loadstring</code> command is all it takes. Paste into any executor and run — zero setup.</p>
       </div>
-      <div class="feat-card">
-        <div class="feat-icon">🔀</div>
-        <h3>Dual Release Track</h3>
-        <p>Stable for reliability. Experimental for the latest. Both auto-fetched from GitHub live.</p>
+
+      <div class="bc">
+        <div class="bi">📦</div>
+        <h3>Version Archive</h3>
+        <p>Every release is preserved in the repo from v3 to v8.8. Roll back to any version at any time.</p>
       </div>
-      <div class="feat-card">
-        <div class="feat-icon">🗂️</div>
-        <h3>Full Version Archive</h3>
-        <p>Every release lives in the repo. Roll back to any previous version at any time.</p>
+
+      <div class="bc wide">
+        <div class="wide-text">
+          <div class="bi">🔄</div>
+          <h3>Always Up to Date</h3>
+          <p>This page fetches live data from the GitHub API every time it loads. The file tree, version names, and script URLs all update automatically the moment you push a new file.</p>
+          <div class="sync-badge" style="margin-top:14px">
+            <div class="sync-spin"></div>
+            Live-synced from sdwird/kaim
+          </div>
+        </div>
+        <div class="wide-visual">
+          <div class="wv-line"><span class="dot dot-green"></span><span>fetching sdwird/kaim tree…</span></div>
+          <div class="wv-line"><span class="dot dot-amber"></span><span>sorting versions by semver…</span></div>
+          <div class="wv-line"><span class="dot dot-purple"></span><span>latest detected: <em id="wv-ver" style="font-style:normal;color:var(--violet)">kaim-v8.8</em></span></div>
+          <div class="wv-line"><span class="dot dot-green"></span><span>code blocks updated ✓</span></div>
+          <div class="wv-line"><span class="dot dot-green"></span><span>file tree rendered ✓</span></div>
+        </div>
+      </div>
+
+      <div class="bc">
+        <div class="bi">⚙️</div>
+        <h3>Config System</h3>
+        <p>Save and reload your custom settings. If a major update breaks your config, simply delete and recreate it.</p>
+      </div>
+
+      <div class="bc">
+        <div class="bi">🔀</div>
+        <h3>Stable &amp; Experimental</h3>
+        <p>Two release tracks. The stable build for reliability, the experimental build for cutting-edge updates.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section class="term-sec rev">
+  <div class="sw">
+    <div class="sh">
+      <div class="slb">// in action</div>
+      <h2>Watch it load</h2>
+      <p>A look at what happens when you execute kaim in your executor.</p>
+    </div>
+    <div class="term-wrap">
+      <div class="term-top">
+        <div class="tdots"><i class="td1"></i><i class="td2"></i><i class="td3"></i></div>
+        <span class="tname">kaim executor — Lua 5.1</span>
+        <div style="width:60px"></div>
+      </div>
+      <div class="term-body" id="term-body">
+        <span class="tcursor"></span>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ═══ RELEASES ═══════════════════════════════ -->
-<section class="rel-sec reveal" id="releases">
+<section class="rel-sec rev" id="releases">
   <div class="sw">
     <div class="sh">
-      <div class="sl">// get the script</div>
+      <div class="slb">// get the script</div>
       <h2>Releases</h2>
+      <p>Copy the command for your preferred release track and paste it into your executor.</p>
     </div>
-
-    <div class="rel-tabs">
-      <button class="rtab on" onclick="switchTab('stable',this)">
-        <span id="tab-s-name">v8.2</span>
-        <span class="rbadge rb-s">Stable</span>
-      </button>
-      <button class="rtab" onclick="switchTab('exp',this)">
-        <span id="tab-e-name">v8.8</span>
-        <span class="rbadge rb-e">Experimental</span>
-      </button>
+    <div class="rtabs">
+      <button class="rtab on" onclick="swt('stable',this)"><span id="tsn">v8.2</span><span class="rbg rbs">Stable</span></button>
+      <button class="rtab" onclick="swt('exp',this)"><span id="ten">v8.8</span><span class="rbg rbe">Experimental</span></button>
     </div>
-
-    <!-- Stable panel -->
-    <div id="panel-stable" class="tpanel on">
-      <div class="cblock">
-        <div class="ctop">
-          <div class="wdots"><i class="wd1"></i><i class="wd2"></i><i class="wd3"></i></div>
-          <span class="cfname" id="fname-stable">kaim-v8.2.lua</span>
-          <button class="cpybtn" onclick="copyCode('code-stable',this)">copy</button>
-        </div>
-        <div class="cbody" id="code-stable"><span class="tk-fn">loadstring</span>(<span class="tk-kw">game</span>:<span class="tk-fn">HttpGet</span>(<span class="tk-str">"https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-v8.2.lua"</span>))()</div>
+    <div id="ps" class="tp on">
+      <div class="cb">
+        <div class="ctop"><div class="wd"><i class="w1"></i><i class="w2"></i><i class="w3"></i></div><span class="cfn" id="fns">kaim-v8.2.lua</span><button class="cpb" onclick="cpy('cs',this)">copy</button></div>
+        <div class="cbod" id="cs"><span class="fn">loadstring</span>(<span class="kw">game</span>:<span class="fn">HttpGet</span>(<span class="st">"https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-v8.2.lua"</span>))()</div>
       </div>
     </div>
-
-    <!-- Experimental panel -->
-    <div id="panel-exp" class="tpanel">
-      <div class="cblock">
-        <div class="ctop">
-          <div class="wdots"><i class="wd1"></i><i class="wd2"></i><i class="wd3"></i></div>
-          <span class="cfname" id="fname-exp">kaim-v8.8.lua</span>
-          <button class="cpybtn" onclick="copyCode('code-exp',this)">copy</button>
-        </div>
-        <div class="cbody" id="code-exp"><span class="tk-cm">-- experimental build: may contain unstable features</span>
-<span class="tk-fn">loadstring</span>(<span class="tk-kw">game</span>:<span class="tk-fn">HttpGet</span>(<span class="tk-str">"https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-v8.8.lua"</span>))()</div>
+    <div id="pe" class="tp">
+      <div class="cb">
+        <div class="ctop"><div class="wd"><i class="w1"></i><i class="w2"></i><i class="w3"></i></div><span class="cfn" id="fne">kaim-v8.8.lua</span><button class="cpb" onclick="cpy('ce',this)">copy</button></div>
+        <div class="cbod" id="ce"><span class="cm">-- experimental: may contain unstable features</span>
+<span class="fn">loadstring</span>(<span class="kw">game</span>:<span class="fn">HttpGet</span>(<span class="st">"https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-v8.8.lua"</span>))()</div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ═══ USAGE ══════════════════════════════════ -->
-<section class="steps-sec reveal">
+<section class="use-sec rev">
   <div class="sw">
     <div class="sh">
-      <div class="sl">// how to run</div>
-      <h2>Usage</h2>
+      <div class="slb">// how to run</div>
+      <h2>Three steps to activate</h2>
     </div>
-    <div class="steps-list">
-      <div class="step-item">
-        <div class="step-n">01</div>
-        <div class="step-b">
-          <h4>Open your executor</h4>
-          <p>Launch a compatible Lua script executor on PC. This script does not run on mobile.</p>
-        </div>
+    <div class="steps-grid">
+      <div class="sc-card">
+        <div class="snum">01</div>
+        <h4>Open your executor</h4>
+        <p>Launch any compatible Lua executor on your PC. Mobile is not supported.</p>
       </div>
-      <div class="step-item">
-        <div class="step-n">02</div>
-        <div class="step-b">
-          <h4>Choose a release</h4>
-          <p>Pick Stable for a tested build, or Experimental for cutting-edge features. Both are above.</p>
-        </div>
+      <div class="sc-card">
+        <div class="snum">02</div>
+        <h4>Choose a release</h4>
+        <p>Grab the Stable build for reliability or Experimental for the latest features above.</p>
       </div>
-      <div class="step-item">
-        <div class="step-n">03</div>
-        <div class="step-b">
-          <h4>Paste &amp; execute</h4>
-          <p>Paste the <code>loadstring</code> command into your executor and run. Activates automatically.</p>
-        </div>
+      <div class="sc-card">
+        <div class="snum">03</div>
+        <h4>Paste &amp; execute</h4>
+        <p>Paste the <code>loadstring</code> into your executor and run. The aimbot activates automatically.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ═══ NOTICE ══════════════════════════════════ -->
-<section class="notice-sec reveal">
+<section class="tree-sec rev">
   <div class="sw">
-    <div class="notice-card">
-      <div class="n-icon">⚠️</div>
+    <div class="sh">
+      <div class="slb">// repository</div>
+      <h2>Project files</h2>
+      <p>Pulled live from GitHub. Updates automatically whenever new files are pushed.</p>
+    </div>
+    <div class="ttbar">
+      <div class="tmeta">sdwird/kaim · <em id="fcount">loading…</em></div>
+      <input class="tsearch" type="text" placeholder="filter files…" id="tsrch" oninput="filterTree(this.value)" autocomplete="off"/>
+    </div>
+    <div class="tbox" id="tbox">
+      <div class="tloading"><div class="tspin"></div>Fetching from GitHub…</div>
+    </div>
+  </div>
+</section>
+
+<section class="notc-sec rev">
+  <div class="sw">
+    <div class="notc">
+      <div class="ni2">⚠️</div>
       <div>
         <h4>Config resets after major updates</h4>
-        <p>Due to frequent changes in the script's memory structure, old config files can break after major version updates. If settings fail to load, delete your old config and create a new one.</p>
+        <p>Frequent changes to the script's memory structure can break old config files after major version bumps. If settings fail to load, delete the old config and create a fresh one.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ═══ FILE TREE ══════════════════════════════ -->
-<section class="tree-sec reveal">
-  <div class="sw">
-    <div class="sh">
-      <div class="sl">// repository</div>
-      <h2>Project files</h2>
-    </div>
-
-    <div class="tree-toolbar">
-      <div class="tree-meta">sdwird/kaim · <em id="file-count">loading…</em></div>
-      <input class="tree-search" type="text" placeholder="filter files…" id="tree-search" oninput="filterTree(this.value)" autocomplete="off"/>
-    </div>
-
-    <div class="tree-box" id="tree-box">
-      <div class="tree-loading">
-        <div class="t-spin"></div>
-        Fetching from GitHub…
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ FOOTER ════════════════════════════════ -->
 <footer>
-  <div class="footer-in">
-    <div class="footer-logo">kaim</div>
-    <div class="footer-links">
+  <div class="fi">
+    <div class="flogo">kaim</div>
+    <div class="flinks">
       <a href="https://github.com/sdwird/kaim" target="_blank" rel="noopener">GitHub</a>
       <a href="https://github.com/sdwird" target="_blank" rel="noopener">sdwird</a>
       <a href="#releases">Get Script</a>
-      <a href="#" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">↑ Top</a>
+      <a href="#" onclick="scrollTo({top:0,behavior:'smooth'});return false">↑ Top</a>
     </div>
-    <div class="footer-copy">sdwird/kaim · Lua aimbot · PC only · auto-updated from GitHub</div>
+    <div class="fcopy">sdwird/kaim · Lua aimbot · PC only · live from GitHub</div>
   </div>
 </footer>
 
-</div><!-- /page -->
-
-<script>
-/* ════════════════════════════════════════════
-   CURSOR
-════════════════════════════════════════════ */
-const dot = document.getElementById('cur-dot');
-const ring= document.getElementById('cur-ring');
+</div><script>
+/* CURSOR */
+const cd=document.getElementById('cd'),cr=document.getElementById('cr');
 let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+(function tick(){cd.style.cssText=`left:${mx}px;top:${my}px`;rx+=(mx-rx)*.11;ry+=(my-ry)*.11;cr.style.cssText=`left:${rx}px;top:${ry}px`;requestAnimationFrame(tick)})();
+document.querySelectorAll('a,button,.bc,.sc-card').forEach(el=>{el.addEventListener('mouseenter',()=>document.body.classList.add('ch'));el.addEventListener('mouseleave',()=>document.body.classList.remove('ch'))});
 
-document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; });
-
-(function tick(){
-  dot.style.left = mx+'px'; dot.style.top = my+'px';
-  rx += (mx-rx)*0.11; ry += (my-ry)*0.11;
-  ring.style.left = rx+'px'; ring.style.top = ry+'px';
-  requestAnimationFrame(tick);
-})();
-
-// Hover enlarge
-document.querySelectorAll('a,button,.feat-card').forEach(el=>{
-  el.addEventListener('mouseenter',()=>document.body.classList.add('cursor-hover'));
-  el.addEventListener('mouseleave',()=>document.body.classList.remove('cursor-hover'));
-});
-
-/* ════════════════════════════════════════════
-   NAV SCROLL
-════════════════════════════════════════════ */
-window.addEventListener('scroll',()=>{
-  document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 50);
-});
-
-/* ════════════════════════════════════════════
-   PARTICLE CANVAS
-════════════════════════════════════════════ */
+/* NAV */
+window.addEventListener('scroll',()=>document.getElementById('nav').classList.toggle('sc',scrollY>40));
+/* PARTICLES */
 (function(){
-  const cv = document.getElementById('pcv');
-  const cx = cv.getContext('2d');
-  let W,H,pts=[];
-
-  function resize(){ W=cv.width=innerWidth; H=cv.height=innerHeight; }
-
-  function mkPt(){
-    return {
-      x: Math.random()*W, y: Math.random()*H,
-      vx:(Math.random()-.5)*.38, vy:(Math.random()-.5)*.38,
-      r: Math.random()*1.4+.4,
-      a: Math.random()*.45+.08
-    };
-  }
-
-  function init(){ resize(); pts=Array.from({length:65},mkPt); }
-
-  function draw(){
-    cx.clearRect(0,0,W,H);
-    for(let i=0;i<pts.length;i++){
-      const p=pts[i];
-      p.x+=p.vx; p.y+=p.vy;
-      if(p.x<0||p.x>W) p.vx*=-1;
-      if(p.y<0||p.y>H) p.vy*=-1;
-      cx.beginPath();
-      cx.arc(p.x,p.y,p.r,0,Math.PI*2);
-      cx.fillStyle=`rgba(124,58,237,${p.a})`;
-      cx.fill();
-      for(let j=i+1;j<pts.length;j++){
-        const q=pts[j];
-        const dx=p.x-q.x, dy=p.y-q.y;
-        const d=dx*dx+dy*dy;
-        if(d<13000){
-          const op=(1-d/13000)*.1;
-          cx.beginPath(); cx.moveTo(p.x,p.y); cx.lineTo(q.x,q.y);
-          cx.strokeStyle=`rgba(124,58,237,${op})`; cx.lineWidth=.5; cx.stroke();
-        }
-      }
-    }
-    requestAnimationFrame(draw);
-  }
-
-  window.addEventListener('resize',()=>{ resize(); });
-  init(); draw();
+  const cv=document.getElementById('pv'),cx=cv.getContext('2d');let W,H,p=[];
+  function r(){W=cv.width=innerWidth;H=cv.height=innerHeight}
+  function mk(){return{x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.38,vy:(Math.random()-.5)*.38,r:Math.random()*1.3+.4,a:Math.random()*.4+.08}}
+  function draw(){cx.clearRect(0,0,W,H);for(let i=0;i<p.length;i++){const a=p[i];a.x+=a.vx;a.y+=a.vy;if(a.x<0||a.x>W)a.vx*=-1;if(a.y<0||a.y>H)a.vy*=-1;cx.beginPath();cx.arc(a.x,a.y,a.r,0,Math.PI*2);cx.fillStyle=`rgba(124,58,237,${a.a})`;cx.fill();for(let j=i+1;j<p.length;j++){const b=p[j],dx=a.x-b.x,dy=a.y-b.y,d=dx*dx+dy*dy;if(d<12000){cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.strokeStyle=`rgba(124,58,237,${.1*(1-d/12000)})`;cx.lineWidth=.5;cx.stroke()}}}requestAnimationFrame(draw)}
+  window.addEventListener('resize',r);r();p=Array.from({length:65},mk);draw();
 })();
+/* GLITCH */
+const gw=document.querySelector('.gw');
+function glitch(){gw.classList.add('fx');setTimeout(()=>gw.classList.remove('fx'),450)}
+setTimeout(glitch,1600);setInterval(glitch,4400);
 
-/* ════════════════════════════════════════════
-   GLITCH EFFECT
-════════════════════════════════════════════ */
-const gw = document.querySelector('.glitch-w');
-function glitch(){
-  gw.classList.add('fire');
-  setTimeout(()=>gw.classList.remove('fire'), 460);
-}
-setTimeout(glitch, 1800); // first pop shortly after load
-setInterval(glitch, 4200);
+/* SCROLL REVEAL */
+const ro=new IntersectionObserver(e=>e.forEach(x=>{if(x.isIntersecting)x.target.classList.add('on')}),{threshold:.08});
+document.querySelectorAll('.rev').forEach(s=>ro.observe(s));
+/* COUNT UP */
+function countUp(el,v,d=1100){if(!el||v<=0){if(el)el.textContent=v;return}const s=Date.now();(function f(){const t=Math.min((Date.now()-s)/d,1),e=1-Math.pow(1-t,3);el.textContent=Math.round(e*v);if(t<1)requestAnimationFrame(f)})()}
 
-/* ════════════════════════════════════════════
-   SCROLL REVEAL
-════════════════════════════════════════════ */
-const ro = new IntersectionObserver(entries=>{
-  entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('on'); });
-},{threshold:.08});
-document.querySelectorAll('.reveal').forEach(s=>ro.observe(s));
+/* TABS */
+function swt(id,btn){document.querySelectorAll('.tp').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.rtab').forEach(b=>b.classList.remove('on'));document.getElementById('p'+id[0]).classList.add('on');btn.classList.add('on')}
 
-/* ════════════════════════════════════════════
-   TABS
-════════════════════════════════════════════ */
-function switchTab(id, btn){
-  document.querySelectorAll('.tpanel').forEach(p=>p.classList.remove('on'));
-  document.querySelectorAll('.rtab').forEach(b=>b.classList.remove('on'));
-  document.getElementById('panel-'+id).classList.add('on');
-  btn.classList.add('on');
+/* COPY */
+function cpy(id,btn){const el=document.getElementById(id);const txt=(el.innerText.split('\n').find(l=>l.trim().startsWith('loadstring'))||el.innerText).trim();navigator.clipboard.writeText(txt).then(()=>{btn.textContent='✓ copied';btn.classList.add('ok');setTimeout(()=>{btn.textContent='copy';btn.classList.remove('ok')},2400)})}
+
+/* TICKER */
+function buildTicker(vers){
+  const extras=['Lua 5.1','PC Only','Roblox','Free & Open','sdwird/kaim','Auto-Updated'];
+  const all=[...vers.map(v=>v.replace('.lua','')),...extras];
+  document.getElementById('tkr').innerHTML=[...all,...all].map(x=>`<span class="tk-item"><span class="tk-dot"></span>${x}</span>`).join('');
 }
 
-/* ════════════════════════════════════════════
-   COPY CODE
-════════════════════════════════════════════ */
-function copyCode(id, btn){
-  const el = document.getElementById(id);
-  const lines = el.innerText.split('\n');
-  // grab only the loadstring line
-  const text = lines.find(l=>l.trim().startsWith('loadstring')) || el.innerText;
-  navigator.clipboard.writeText(text.trim()).then(()=>{
-    btn.textContent='✓ copied';
-    btn.classList.add('ok');
-    setTimeout(()=>{ btn.textContent='copy'; btn.classList.remove('ok'); }, 2400);
+/* TERMINAL ANIMATION */
+const termLines=[
+  {p:'$',c:'cmd',t:`loadstring(game:HttpGet("https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-v8.8.lua"))()`},
+  {p:'»',c:'info',t:'Connecting to raw.githubusercontent.com…'},
+  {p:'»',c:'info',t:'Fetching kaim-v8.8.lua…'},
+  {p:'»',c:'info',t:'Script downloaded  (52.4 KB)'},
+  {p:'»',c:'ok',  t:'[kaim v8.8] Initializing…'},
+  {p:'»',c:'ok',  t:'[kaim v8.8] Config loaded'},
+  {p:'»',c:'ok',  t:'[kaim v8.8] Target detection: READY'},
+  {p:'»',c:'ok',  t:'[kaim v8.8] Aimbot: ACTIVE ●'},
+];
+const delays=[0,700,1200,1800,2400,2900,3400,3900];
+let termStarted=false;
+
+const termObs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting&&!termStarted){
+      termStarted=true;
+      const body=document.getElementById('term-body');
+      body.innerHTML='';
+      termLines.forEach((l,i)=>{
+        setTimeout(()=>{
+          body.innerHTML=''; // clear cursor
+          const row=document.createElement('div');
+          row.className='tline';
+          row.style.animationDelay='0ms';
+          const cc=l.c==='cmd'?'tcmd':l.c==='ok'?'tok':'tinfo';
+          row.innerHTML=`<span class="tprompt">${l.p}</span><span class="${cc}">${l.t}</span>`;
+          body.appendChild(row);
+          if(i<termLines.length-1){const cur=document.createElement('span');cur.className='tcursor';body.appendChild(cur)}
+        },delays[i]);
+      });
+    }
   });
-}
+},{threshold:.3});
+const termEl=document.querySelector('.term-sec');
+if(termEl)termObs.observe(termEl);
 
-/* ════════════════════════════════════════════
-   COUNT UP
-════════════════════════════════════════════ */
-function countUp(el, target, dur=1100){
-  if(target <= 0){ el.textContent='0'; return; }
-  const start=Date.now();
-  (function f(){
-    const t=Math.min((Date.now()-start)/dur,1);
-    const e=1-Math.pow(1-t,3);
-    el.textContent=Math.round(e*target);
-    if(t<1) requestAnimationFrame(f);
-  })();
-}
+/* VERSION PARSING */
+function verScore(n){const m=n.match(/kaim-v(\d+)[._]?(\d*)/);if(!m)return 0;return parseInt(m[1])*100+(m[2]?parseInt(m[2]):0)}
 
-/* ════════════════════════════════════════════
-   VERSION PARSING
-════════════════════════════════════════════ */
-function verScore(name){
-  const m=name.match(/kaim-v(\d+)[._]?(\d*)/);
-  if(!m) return 0;
-  return parseInt(m[1])*100+(m[2]?parseInt(m[2]):0);
-}
-
-/* ════════════════════════════════════════════
-   BUILD TICKER
-════════════════════════════════════════════ */
-function buildTicker(versions){
-  const fallback=['kaim-v8.8','kaim-v8.2','kaim-v7.8','kaim-v6.5','kaim-v4.1','kaim-v3.3'];
-  const items=(versions.length ? versions.map(v=>v.replace('.lua','')) : fallback);
-  const extras=['Lua 5.1','PC Only','Roblox','auto-updated','sdwird/kaim'];
-  const all=[...items,...extras];
-  // duplicate for seamless loop
-  const html=[...all,...all].map(x=>
-    `<span class="ticker-item"><span class="t-dot"></span>${x}</span>`
-  ).join('');
-  document.getElementById('ticker').innerHTML=html;
-}
-
-/* ════════════════════════════════════════════
-   RENDER FILE TREE
-════════════════════════════════════════════ */
-let treeFiles=[];
-function renderTree(files, expFile, stableFile){
-  const box=document.getElementById('tree-box');
-  box.innerHTML=`<div class="tree-dir">kaim/</div>`;
+/* TREE */
+let allFiles=[];
+function renderTree(files,exp,stab){
+  const box=document.getElementById('tbox');
+  box.innerHTML=`<div class="tdir">kaim/</div>`;
   files.forEach((f,i)=>{
-    const isExp    = f===expFile;
-    const isStable = f===stableFile;
-    const isReadme = f==='README.md';
-    let badge='', cls='tree-file';
-    if(isExp)    { badge='<span class="tbadge tb-l">latest</span>'; cls='tree-main'; }
-    if(isStable) { badge='<span class="tbadge tb-s">stable</span>'; cls='tree-main'; }
-    if(isReadme) { badge='<span class="tbadge tb-r">readme</span>'; cls='tree-main'; }
+    const isE=f===exp,isS=f===stab,isR=f==='README.md';
+    let badge='',cls='tfile';
+    if(isE){badge='<span class="tbg tbl">latest</span>';cls='tmain'}
+    if(isS){badge='<span class="tbg tbs">stable</span>';cls='tmain'}
+    if(isR){badge='<span class="tbg tbr">readme</span>';cls='tmain'}
     const row=document.createElement('div');
-    row.className='tree-row';
-    row.setAttribute('data-name',f.toLowerCase());
-    row.style.animationDelay=(i*28)+'ms';
+    row.className='trow';row.setAttribute('data-name',f.toLowerCase());
+    row.style.animationDelay=(i*25)+'ms';
     row.innerHTML=`<span>├── <span class="${cls}">${f}</span></span>${badge}`;
     box.appendChild(row);
   });
 }
+function filterTree(q){document.querySelectorAll('.trow').forEach(r=>{r.style.display=r.getAttribute('data-name').includes(q.toLowerCase())?'':'none'})}
 
-function filterTree(q){
-  document.querySelectorAll('.tree-row').forEach(r=>{
-    r.style.display=r.getAttribute('data-name').includes(q.toLowerCase())?'':'none';
-  });
-}
+/* GITHUB API */
+const OW='sdwird',RE='kaim',RAW=`https://raw.githubusercontent.com/${OW}/${RE}/refs/heads/main/`;
+const FB=['README.md','kaim-v8.8.lua','kaim-v8.2.lua','kaim-v8.7.lua','kaim-v7.8.lua','kaim-v6.5.lua','kaim-v6.0.lua','kaim-v4.1.lua','kaim-v3.3.lua','kaim-v3.lua','doors.lua','parkour-legacy-bagesp.lua','parkour-reborn-autofarm.lua','rake-remastered.lua','yba-script.lua'];
 
-/* ════════════════════════════════════════════
-   GITHUB API
-════════════════════════════════════════════ */
-const OWNER='sdwird', REPO='kaim';
-const BASE_RAW=`https://raw.githubusercontent.com/${OWNER}/${REPO}/refs/heads/main/`;
-const FALLBACK_FILES=[
-  'README.md','kaim-v8.8.lua','kaim-v8.2.lua','kaim-v8.7.lua',
-  'kaim-v7.8.lua','kaim-v6.5.lua','kaim-v6.0.lua','kaim-v4.1.lua',
-  'kaim-v3.3.lua','kaim-v3.lua','doors.lua',
-  'parkour-legacy-bagesp.lua','parkour-reborn-autofarm.lua',
-  'rake-remastered.lua','yba-script.lua'
-];
-
-function setCodeBlock(tab, filename, url, isExp){
-  document.getElementById('fname-'+tab).textContent=filename;
-  document.getElementById('tab-'+(tab==='stable'?'s':'e')+'-name').textContent=
-    filename.replace('kaim-','').replace('.lua','');
-  const line=
-    `<span class="tk-fn">loadstring</span>`+
-    `(<span class="tk-kw">game</span>:<span class="tk-fn">HttpGet</span>`+
-    `(<span class="tk-str">"${url}"</span>))()`;
-  document.getElementById('code-'+tab).innerHTML=isExp
-    ? `<span class="tk-cm">-- experimental build: may contain unstable features</span>\n${line}`
-    : line;
-}
-
-async function loadGitHub(){
-  // ── Repo stats ──────────────────────────
-  try {
-    const r=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}`);
-    if(r.ok){
-      const d=await r.json();
-      countUp(document.getElementById('s-stars'), d.stargazers_count||0);
-      countUp(document.getElementById('s-forks'), d.forks_count||0);
-    }
-  } catch(_){}
-
-  // ── File tree ────────────────────────────
+async function loadGH(){
+  /* repo stats */
+  try{const r=await fetch(`https://api.github.com/repos/${OW}/${RE}`);if(r.ok){const d=await r.json();countUp(document.getElementById('ss'),d.stargazers_count||0);countUp(document.getElementById('sf'),d.forks_count||0)}}catch(_){}
+  /* file tree */
   let files=[];
-  try {
-    const r=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/trees/main?recursive=1`);
-    if(!r.ok) throw new Error('rate-limited');
-    const d=await r.json();
-    files=d.tree.filter(f=>f.type==='blob').map(f=>f.path);
-  } catch(_){
-    files=FALLBACK_FILES;
-  }
-
-  treeFiles=files;
-
-  // ── Detect versions ──────────────────────
-  const kaimVers=files
-    .filter(f=>/^kaim-v[\d]+\.[\d.]*lua$/.test(f))
-    .sort((a,b)=>verScore(b)-verScore(a));
-
-  const expFile    = kaimVers[0] || 'kaim-v8.8.lua';
-  const stableFile = kaimVers[1] || 'kaim-v8.2.lua';
-
-  // ── Update nav ───────────────────────────
-  document.getElementById('nver').textContent=
-    expFile.replace('kaim-','').replace('.lua','');
-
-  // ── Update code blocks ───────────────────
-  setCodeBlock('stable', stableFile, BASE_RAW+stableFile, false);
-  setCodeBlock('exp',    expFile,    BASE_RAW+expFile,    true);
-
-  // ── Versions count ───────────────────────
-  countUp(document.getElementById('s-vers'), kaimVers.length||9);
-
-  // ── File count ───────────────────────────
-  document.getElementById('file-count').innerHTML=
-    `<em>${files.length}</em> file${files.length!==1?'s':''}`;
-
-  // ── Render tree ──────────────────────────
-  renderTree(files, expFile, stableFile);
-
-  // ── Ticker ───────────────────────────────
-  buildTicker(kaimVers);
+  try{const r=await fetch(`https://api.github.com/repos/${OW}/${RE}/git/trees/main?recursive=1`);if(!r.ok)throw 0;const d=await r.json();files=d.tree.filter(f=>f.type==='blob').map(f=>f.path)}catch(_){files=FB}
+  /* version detection */
+  const vers=files.filter(f=>/^kaim-v[\d.]+\.lua$/.test(f)).sort((a,b)=>verScore(b)-verScore(a));
+  const exp=vers[0]||'kaim-v8.8.lua',stab=vers[1]||'kaim-v8.2.lua';
+  /* nav + wide card */
+  document.getElementById('nver').textContent=exp.replace('kaim-','').replace('.lua','');
+  const wv=document.getElementById('wv-ver');if(wv)wv.textContent=exp.replace('.lua','');
+  /* tabs */
+  document.getElementById('tsn').textContent=stab.replace('kaim-','').replace('.lua','');
+  document.getElementById('ten').textContent=exp.replace('kaim-','').replace('.lua','');
+  /* code blocks */
+  document.getElementById('fns').textContent=stab;
+  document.getElementById('fne').textContent=exp;
+  document.getElementById('cs').innerHTML=`<span class="fn">loadstring</span>(<span class="kw">game</span>:<span class="fn">HttpGet</span>(<span class="st">"${RAW}${stab}"</span>))()`;
+  document.getElementById('ce').innerHTML=`<span class="cm">-- experimental: may contain unstable features</span>\n<span class="fn">loadstring</span>(<span class="kw">game</span>:<span class="fn">HttpGet</span>(<span class="st">"${RAW}${exp}"</span>))()`;
+  /* stats */
+  countUp(document.getElementById('sv'),vers.length||9);
+  const sv2=document.getElementById('stripe-vers');if(sv2)sv2.textContent=vers.length||'9+';
+  /* file count */
+  document.getElementById('fcount').innerHTML=`<em>${files.length}</em> files`;
+  /* tree + ticker */
+  renderTree(files,exp,stab);
+  buildTicker(vers.length?vers:FB.filter(f=>f.startsWith('kaim-v')));
 }
 
-loadGitHub();
+loadGH();
 </script>
 </body>
 </html>
