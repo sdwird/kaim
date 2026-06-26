@@ -1,1 +1,1258 @@
-hello
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="description" content="kaim — precision Lua aimbot script for Roblox executors. One loadstring, instant activation."/>
+<title>kaim</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+/* ══════════════════════════════════════════════
+   TOKENS
+══════════════════════════════════════════════ */
+:root {
+  --night:   #060612;
+  --ink:     #0c0c1a;
+  --card:    #10101e;
+  --line:    #1c1c2e;
+  --line2:   #252538;
+  --purple:  #7c3aed;
+  --violet:  #a78bfa;
+  --lilac:   #c4b5fd;
+  --teal:    #2dd4bf;
+  --green:   #22c55e;
+  --red:     #ef4444;
+  --amber:   #f59e0b;
+  --snow:    #e8e8f8;
+  --mist:    #6b6b90;
+  --dim:     #40405a;
+  --glow:    rgba(124,58,237,.28);
+  --glow-sm: rgba(124,58,237,.12);
+}
+
+*,*::before,*::after { box-sizing: border-box; margin:0; padding:0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--night);
+  color: var(--snow);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  overflow-x: hidden;
+  cursor: none;
+}
+
+/* subtle grid */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(124,58,237,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124,58,237,.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ══════════════════════════════════════════════
+   CUSTOM CURSOR
+══════════════════════════════════════════════ */
+#cur-dot,#cur-ring {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%,-50%);
+}
+#cur-dot {
+  width: 5px; height: 5px;
+  background: var(--violet);
+  box-shadow: 0 0 8px var(--violet);
+}
+#cur-ring {
+  width: 30px; height: 30px;
+  border: 1.5px solid rgba(167,139,250,.5);
+  transition: width .18s, height .18s, border-color .18s;
+}
+.cursor-hover #cur-ring {
+  width: 44px; height: 44px;
+  border-color: var(--violet);
+}
+
+/* ══════════════════════════════════════════════
+   CANVAS
+══════════════════════════════════════════════ */
+#pcv {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ══════════════════════════════════════════════
+   PAGE WRAPPER
+══════════════════════════════════════════════ */
+.page { position: relative; z-index: 1; }
+
+/* ══════════════════════════════════════════════
+   NAV
+══════════════════════════════════════════════ */
+#nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  padding: 0 32px;
+  border-bottom: 1px solid transparent;
+  transition: background .35s, border-color .35s, backdrop-filter .35s;
+}
+#nav.scrolled {
+  background: rgba(6,6,18,.82);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border-color: var(--line);
+}
+.nav-in {
+  max-width: 920px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 66px;
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 9px;
+  text-decoration: none;
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -.03em;
+}
+.nav-pulse {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: blink-dot 2.2s ease infinite;
+}
+@keyframes blink-dot {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:.3; transform:scale(.7); }
+}
+.nav-right { display:flex; align-items:center; gap:16px; }
+.nav-ver {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--mist);
+  background: var(--card);
+  border: 1px solid var(--line);
+  padding: 4px 13px;
+  border-radius: 7px;
+}
+.nav-ver em { font-style: normal; color: var(--violet); }
+.nav-gh {
+  display: flex; align-items: center; gap: 8px;
+  color: var(--snow);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border: 1px solid var(--line2);
+  border-radius: 9px;
+  background: var(--card);
+  transition: border-color .2s, color .2s, background .2s;
+}
+.nav-gh:hover {
+  border-color: var(--purple);
+  color: var(--violet);
+  background: var(--glow-sm);
+}
+
+/* ══════════════════════════════════════════════
+   HERO
+══════════════════════════════════════════════ */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 100px 24px 64px;
+  text-align: center;
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 55% at 50% 50%, rgba(124,58,237,.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Targeting reticle */
+.reticle-w {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.reticle {
+  width: min(80vw, 620px);
+  height: min(80vw, 620px);
+  animation: reticle-appear 2s cubic-bezier(.22,1,.36,1) forwards;
+}
+@keyframes reticle-appear {
+  from { opacity:0; transform:scale(.6); }
+  to   { opacity:1; transform:scale(1); }
+}
+.r-spin   { animation: cw  32s linear infinite; transform-origin:200px 200px; }
+.r-spin2  { animation: ccw 22s linear infinite; transform-origin:200px 200px; }
+.r-pulse  { animation: pop  3.5s ease-in-out infinite; }
+.r-center { animation: dot-pop 2.2s ease-in-out infinite; transform-origin:200px 200px; }
+@keyframes cw    { to { transform: rotate(360deg); } }
+@keyframes ccw   { to { transform: rotate(-360deg); } }
+@keyframes pop   { 0%,100%{opacity:.22;} 50%{opacity:.55;} }
+@keyframes dot-pop { 0%,100%{transform:scale(1);opacity:.6;} 50%{transform:scale(2.2);opacity:.2;} }
+
+/* Hero content */
+.hero-c {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--mist);
+  margin-bottom: 24px;
+  opacity: 0;
+  animation: fadeup .6s .15s ease forwards;
+}
+.eyebrow-live {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: blink-dot 2s ease infinite;
+}
+
+/* Title with glitch */
+.hero-title {
+  font-size: clamp(88px, 19vw, 168px);
+  font-weight: 700;
+  letter-spacing: -.055em;
+  line-height: .88;
+  margin-bottom: 26px;
+  opacity: 0;
+  animation: fadeup .75s .3s ease forwards;
+}
+.glitch-w {
+  position: relative;
+  display: inline-block;
+}
+.glitch-w .g-clone {
+  position: absolute;
+  top: 0; left: 0;
+  font-size: inherit; font-weight: inherit;
+  letter-spacing: inherit; line-height: inherit;
+  pointer-events: none;
+  opacity: 0;
+  user-select: none;
+}
+.g-a { color: rgba(0,255,255,.75); }
+.g-b { color: rgba(255,0,255,.55); }
+.glitch-w.fire .g-a {
+  opacity: 1;
+  animation: ga .44s steps(3) forwards;
+}
+.glitch-w.fire .g-b {
+  opacity: 1;
+  animation: gb .44s steps(3) forwards;
+}
+@keyframes ga {
+  0%   { clip-path:inset(5% 0 88% 0);  transform:translate(-4px,0); }
+  33%  { clip-path:inset(45% 0 42% 0); transform:translate(4px,0); }
+  66%  { clip-path:inset(72% 0 12% 0); transform:translate(-3px,0); }
+  100% { clip-path:inset(0 0 100% 0);  opacity:0; }
+}
+@keyframes gb {
+  0%   { clip-path:inset(62% 0 22% 0); transform:translate(4px,0); }
+  33%  { clip-path:inset(18% 0 72% 0); transform:translate(-4px,0); }
+  66%  { clip-path:inset(38% 0 48% 0); transform:translate(3px,0); }
+  100% { clip-path:inset(0 0 100% 0);  opacity:0; }
+}
+.glitch-main {
+  display: block;
+  background: linear-gradient(138deg, #fff 0%, var(--violet) 52%, #c084fc 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-sub {
+  font-size: 17px;
+  color: var(--mist);
+  max-width: 400px;
+  margin-bottom: 38px;
+  opacity: 0;
+  animation: fadeup .7s .48s ease forwards;
+}
+
+/* CTAs */
+.hero-cta {
+  display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+  margin-bottom: 60px;
+  opacity: 0;
+  animation: fadeup .7s .62s ease forwards;
+}
+.btn-p {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--purple);
+  color: #fff;
+  text-decoration: none;
+  padding: 13px 26px;
+  border-radius: 11px;
+  font-weight: 600; font-size: 14px;
+  box-shadow: 0 0 28px var(--glow);
+  transition: background .2s, transform .2s, box-shadow .2s;
+}
+.btn-p:hover { background: var(--violet); transform:translateY(-2px); box-shadow:0 6px 36px var(--glow); }
+.btn-g {
+  display: inline-flex; align-items: center; gap: 7px;
+  color: var(--snow);
+  text-decoration: none;
+  padding: 13px 26px;
+  border-radius: 11px;
+  font-weight: 500; font-size: 14px;
+  border: 1px solid var(--line2);
+  background: var(--card);
+  transition: border-color .2s, color .2s, background .2s;
+}
+.btn-g:hover { border-color: var(--purple); color: var(--violet); background: var(--glow-sm); }
+
+/* Stats bar */
+.hero-stats {
+  display: flex; align-items: center; gap: 36px;
+  opacity: 0;
+  animation: fadeup .7s .78s ease forwards;
+}
+.stat-item { display:flex; flex-direction:column; align-items:center; gap:4px; }
+.stat-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 26px; font-weight: 600;
+  color: #fff; line-height: 1;
+}
+.stat-lbl {
+  font-size: 11px; color: var(--mist);
+  text-transform: uppercase; letter-spacing: .1em;
+}
+.stat-div { width:1px; height:34px; background: var(--line2); }
+
+/* ══════════════════════════════════════════════
+   TICKER
+══════════════════════════════════════════════ */
+.ticker-outer {
+  overflow: hidden;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: var(--ink);
+  padding: 14px 0;
+}
+.ticker-track {
+  display: flex;
+  gap: 56px;
+  white-space: nowrap;
+  width: max-content;
+  animation: tick 24s linear infinite;
+}
+.ticker-item {
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--dim);
+  letter-spacing: .06em;
+}
+.ticker-item .t-dot {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--purple);
+  opacity: .7;
+}
+@keyframes tick { 0%{transform:translateX(0);} 100%{transform:translateX(-50%);} }
+
+/* ══════════════════════════════════════════════
+   SECTION SCAFFOLD
+══════════════════════════════════════════════ */
+.reveal {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity .75s ease, transform .75s ease;
+}
+.reveal.on { opacity:1; transform:translateY(0); }
+
+.sw {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.sh { margin-bottom: 38px; }
+.sl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--violet);
+  margin-bottom: 10px;
+}
+.sh h2 {
+  font-size: 32px; font-weight: 700;
+  letter-spacing: -.03em;
+  color: #fff;
+}
+
+/* ══════════════════════════════════════════════
+   FEATURES
+══════════════════════════════════════════════ */
+.feat-sec { padding: 96px 0; }
+.feat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px,1fr));
+  gap: 14px;
+}
+.feat-card {
+  position: relative;
+  background: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 28px 24px;
+  overflow: hidden;
+  cursor: default;
+  transition: border-color .3s, transform .3s, box-shadow .3s;
+}
+.feat-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 25% 25%, rgba(124,58,237,.08) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity .3s;
+}
+.feat-card:hover::before { opacity: 1; }
+.feat-card:hover {
+  border-color: rgba(124,58,237,.45);
+  transform: translateY(-5px);
+  box-shadow: 0 16px 48px rgba(124,58,237,.1);
+}
+.feat-icon {
+  width: 46px; height: 46px;
+  border-radius: 13px;
+  background: rgba(124,58,237,.14);
+  border: 1px solid rgba(124,58,237,.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 21px;
+  margin-bottom: 18px;
+}
+.feat-card h3 { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 8px; }
+.feat-card p  { font-size: 13px; color: var(--mist); line-height: 1.6; }
+
+/* ══════════════════════════════════════════════
+   RELEASES
+══════════════════════════════════════════════ */
+.rel-sec { padding: 0 0 96px; }
+.rel-tabs { display:flex; gap:8px; margin-bottom:18px; }
+.rtab {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  padding: 10px 18px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--mist);
+  cursor: pointer;
+  transition: all .2s;
+}
+.rtab:hover { border-color: var(--purple); color: var(--snow); }
+.rtab.on    { border-color: var(--purple); background: rgba(124,58,237,.12); color: #fff; }
+.rbadge {
+  font-size: 10px; padding: 2px 8px;
+  border-radius: 5px; font-weight: 600;
+  letter-spacing: .05em; text-transform: uppercase;
+}
+.rb-s { background: rgba(34,197,94,.14);  color: #86efac; }
+.rb-e { background: rgba(245,158,11,.14); color: #fcd34d; }
+
+/* Code block */
+.cblock {
+  background: #07070e;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.ctop {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255,255,255,.018);
+}
+.wdots { display:flex; gap:7px; }
+.wdots i { display:block; width:12px; height:12px; border-radius:50%; }
+.wd1 { background:#ff5f57; } .wd2 { background:#febc2e; } .wd3 { background:#28c840; }
+.cfname {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--dim);
+}
+.cpybtn {
+  background: rgba(124,58,237,.16);
+  border: 1px solid rgba(124,58,237,.3);
+  color: var(--violet);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: .05em;
+  padding: 5px 14px; border-radius: 7px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.cpybtn:hover { background: rgba(124,58,237,.3); }
+.cpybtn.ok { color: #86efac; border-color: rgba(34,197,94,.4); }
+.cbody {
+  padding: 22px 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13.5px; line-height: 1.85;
+  overflow-x: auto;
+  white-space: pre;
+}
+.tk-kw  { color: #c084fc; }
+.tk-fn  { color: #818cf8; }
+.tk-str { color: #6ee7b7; }
+.tk-cm  { color: var(--dim); font-style: italic; }
+
+.tpanel { display:none; }
+.tpanel.on { display:block; }
+
+/* ══════════════════════════════════════════════
+   USAGE STEPS
+══════════════════════════════════════════════ */
+.steps-sec { padding: 0 0 96px; }
+.steps-list { position: relative; display:flex; flex-direction:column; }
+.steps-list::before {
+  content: '';
+  position: absolute;
+  left: 20px; top: 20px; bottom: 20px;
+  width: 1px;
+  background: linear-gradient(to bottom, var(--purple), transparent);
+}
+.step-item { display:flex; gap:22px; padding:18px 16px 18px 0; }
+.step-n {
+  flex-shrink: 0;
+  width: 40px; height: 40px;
+  border-radius: 11px;
+  background: rgba(124,58,237,.14);
+  border: 1px solid var(--purple);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 600;
+  color: var(--violet);
+  position: relative; z-index: 1;
+}
+.step-b { padding-top: 7px; }
+.step-b h4 { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 5px; }
+.step-b p  { font-size: 13px; color: var(--mist); }
+.step-b code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--violet);
+  background: rgba(124,58,237,.1);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* ══════════════════════════════════════════════
+   NOTICE
+══════════════════════════════════════════════ */
+.notice-sec { padding: 0 0 96px; }
+.notice-card {
+  background: rgba(239,68,68,.06);
+  border: 1px solid rgba(239,68,68,.22);
+  border-radius: 16px;
+  padding: 24px 26px;
+  display: flex; gap: 18px; align-items: flex-start;
+}
+.n-icon { font-size: 22px; flex-shrink:0; margin-top:2px; }
+.notice-card h4 { font-size: 14px; font-weight: 600; color: #fca5a5; margin-bottom: 6px; }
+.notice-card p  { font-size: 13px; color: #f87171; line-height: 1.6; }
+
+/* ══════════════════════════════════════════════
+   FILE TREE
+══════════════════════════════════════════════ */
+.tree-sec { padding: 0 0 96px; }
+.tree-toolbar {
+  display: flex; align-items: center; gap:12px;
+  margin-bottom: 14px; flex-wrap: wrap;
+}
+.tree-meta {
+  flex: 1;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--dim);
+}
+.tree-meta em { font-style: normal; color: var(--violet); }
+.tree-search {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: var(--snow);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  padding: 8px 14px;
+  outline: none;
+  width: 210px;
+  transition: border-color .2s;
+}
+.tree-search:focus { border-color: var(--purple); }
+.tree-search::placeholder { color: var(--dim); }
+.tree-box {
+  background: #07070e;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 22px 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; line-height: 2.05;
+  min-height: 220px;
+}
+.tree-dir  { color: var(--violet); font-weight: 600; }
+.tree-main { color: var(--snow); }
+.tree-file { color: #8899aa; }
+.tree-row {
+  display: flex; align-items: center; gap: 12px;
+  opacity: 0;
+  animation: fadein .25s ease forwards;
+  transition: color .15s;
+}
+.tree-row:hover .tree-file { color: var(--snow); }
+.tree-row:hover .tree-main { color: #fff; }
+.tbadge {
+  font-size: 9px; padding: 1px 7px;
+  border-radius: 4px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .05em;
+  flex-shrink: 0;
+}
+.tb-l { background: rgba(124,58,237,.2);  color: var(--violet); }
+.tb-s { background: rgba(34,197,94,.15);  color: #86efac; }
+.tb-r { background: rgba(45,212,191,.15); color: #5eead4; }
+.tree-loading {
+  display: flex; align-items: center; gap: 10px;
+  color: var(--dim); padding: 24px 0;
+}
+.t-spin {
+  width: 15px; height: 15px;
+  border: 1.5px solid var(--line2);
+  border-top-color: var(--violet);
+  border-radius: 50%;
+  animation: spin .55s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ══════════════════════════════════════════════
+   FOOTER
+══════════════════════════════════════════════ */
+footer {
+  border-top: 1px solid var(--line);
+  padding: 46px 24px 52px;
+}
+.footer-in {
+  max-width: 920px; margin: 0 auto;
+  text-align: center;
+}
+.footer-logo {
+  font-size: 24px; font-weight: 700;
+  letter-spacing: -.04em;
+  color: #fff; margin-bottom: 14px;
+}
+.footer-links {
+  display: flex; gap: 24px; justify-content: center;
+  margin-bottom: 22px; flex-wrap: wrap;
+}
+.footer-links a {
+  color: var(--mist); text-decoration: none;
+  font-size: 13px; transition: color .2s;
+}
+.footer-links a:hover { color: var(--violet); }
+.footer-copy { font-size: 12px; color: var(--dim); }
+
+/* ══════════════════════════════════════════════
+   SHARED ANIMATIONS
+══════════════════════════════════════════════ */
+@keyframes fadeup  { from{opacity:0;transform:translateY(22px);} to{opacity:1;transform:translateY(0);} }
+@keyframes fadein  { to{opacity:1;} }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+@media (max-width: 600px) {
+  body { cursor: auto; }
+  #cur-dot, #cur-ring { display: none; }
+  .hero-title { font-size: 72px; }
+  .nav-ver { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Custom cursor -->
+<div id="cur-dot"></div>
+<div id="cur-ring"></div>
+
+<!-- Particle background -->
+<canvas id="pcv"></canvas>
+
+<div class="page">
+
+<!-- ═══ NAV ═══════════════════════════════════ -->
+<nav id="nav">
+  <div class="nav-in">
+    <a href="#" class="nav-logo">
+      kaim
+      <span class="nav-pulse"></span>
+    </a>
+    <div class="nav-right">
+      <div class="nav-ver">latest: <em id="nver">—</em></div>
+      <a href="https://github.com/sdwird/kaim" target="_blank" rel="noopener" class="nav-gh">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.341-3.369-1.341-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
+        </svg>
+        GitHub
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══ HERO ══════════════════════════════════ -->
+<section class="hero">
+  <div class="reticle-w">
+    <svg class="reticle" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <!-- static outer halo -->
+      <circle cx="200" cy="200" r="188" fill="none" stroke="rgba(124,58,237,.04)" stroke-width="1"/>
+      <!-- spinning dashed ring -->
+      <g class="r-spin">
+        <circle cx="200" cy="200" r="168" fill="none" stroke="rgba(124,58,237,.13)" stroke-width="1" stroke-dasharray="20 10"/>
+      </g>
+      <!-- pulsing solid ring -->
+      <circle cx="200" cy="200" r="124" fill="none" stroke="rgba(124,58,237,.18)" stroke-width="1.2" class="r-pulse"/>
+      <!-- counter-spinning inner ring -->
+      <g class="r-spin2">
+        <circle cx="200" cy="200" r="78" fill="none" stroke="rgba(124,58,237,.2)" stroke-width="1" stroke-dasharray="9 7"/>
+      </g>
+      <!-- crosshair arms -->
+      <line x1="200" y1="22"  x2="200" y2="122" stroke="rgba(124,58,237,.28)" stroke-width="1.5"/>
+      <line x1="200" y1="278" x2="200" y2="378" stroke="rgba(124,58,237,.28)" stroke-width="1.5"/>
+      <line x1="22"  y1="200" x2="122" y2="200" stroke="rgba(124,58,237,.28)" stroke-width="1.5"/>
+      <line x1="278" y1="200" x2="378" y2="200" stroke="rgba(124,58,237,.28)" stroke-width="1.5"/>
+      <!-- tick marks at cardinal points -->
+      <line x1="200" y1="14"  x2="200" y2="26"  stroke="rgba(124,58,237,.45)" stroke-width="2"/>
+      <line x1="200" y1="374" x2="200" y2="386" stroke="rgba(124,58,237,.45)" stroke-width="2"/>
+      <line x1="14"  y1="200" x2="26"  y2="200" stroke="rgba(124,58,237,.45)" stroke-width="2"/>
+      <line x1="374" y1="200" x2="386" y2="200" stroke="rgba(124,58,237,.45)" stroke-width="2"/>
+      <!-- range ticks at 45° diagonals -->
+      <line x1="142" y1="142" x2="152" y2="152" stroke="rgba(124,58,237,.22)" stroke-width="1"/>
+      <line x1="258" y1="142" x2="248" y2="152" stroke="rgba(124,58,237,.22)" stroke-width="1"/>
+      <line x1="142" y1="258" x2="152" y2="248" stroke="rgba(124,58,237,.22)" stroke-width="1"/>
+      <line x1="258" y1="258" x2="248" y2="248" stroke="rgba(124,58,237,.22)" stroke-width="1"/>
+      <!-- corner brackets -->
+      <path d="M54,26 L26,26 L26,54"  fill="none" stroke="rgba(124,58,237,.32)" stroke-width="1.8"/>
+      <path d="M346,26 L374,26 L374,54" fill="none" stroke="rgba(124,58,237,.32)" stroke-width="1.8"/>
+      <path d="M54,374 L26,374 L26,346" fill="none" stroke="rgba(124,58,237,.32)" stroke-width="1.8"/>
+      <path d="M346,374 L374,374 L374,346" fill="none" stroke="rgba(124,58,237,.32)" stroke-width="1.8"/>
+      <!-- center mark -->
+      <line x1="191" y1="200" x2="209" y2="200" stroke="rgba(124,58,237,.65)" stroke-width="1.8"/>
+      <line x1="200" y1="191" x2="200" y2="209" stroke="rgba(124,58,237,.65)" stroke-width="1.8"/>
+      <circle cx="200" cy="200" r="2.8" fill="rgba(124,58,237,.55)" class="r-center"/>
+      <!-- compass labels -->
+      <text x="196" y="9"   font-family="JetBrains Mono,monospace" font-size="7.5" fill="rgba(124,58,237,.38)">N</text>
+      <text x="196" y="399" font-family="JetBrains Mono,monospace" font-size="7.5" fill="rgba(124,58,237,.38)">S</text>
+      <text x="1"   y="203" font-family="JetBrains Mono,monospace" font-size="7.5" fill="rgba(124,58,237,.38)">W</text>
+      <text x="389" y="203" font-family="JetBrains Mono,monospace" font-size="7.5" fill="rgba(124,58,237,.38)">E</text>
+    </svg>
+  </div>
+
+  <div class="hero-c">
+    <div class="hero-eyebrow">
+      <span class="eyebrow-live"></span>
+      Lua · Roblox Executor · PC Only
+    </div>
+
+    <h1 class="hero-title">
+      <span class="glitch-w">
+        <span class="g-clone g-a">kaim</span>
+        <span class="g-clone g-b">kaim</span>
+        <span class="glitch-main">kaim</span>
+      </span>
+    </h1>
+
+    <p class="hero-sub">Precision aimbot script. One loadstring, instant activation, always current.</p>
+
+    <div class="hero-cta">
+      <a href="#releases" class="btn-p">Get the Script ↓</a>
+      <a href="https://github.com/sdwird/kaim" target="_blank" rel="noopener" class="btn-g">View on GitHub ↗</a>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat-item"><span class="stat-num" id="s-stars">—</span><span class="stat-lbl">Stars</span></div>
+      <span class="stat-div"></span>
+      <div class="stat-item"><span class="stat-num" id="s-forks">—</span><span class="stat-lbl">Forks</span></div>
+      <span class="stat-div"></span>
+      <div class="stat-item"><span class="stat-num" id="s-vers">—</span><span class="stat-lbl">Versions</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ TICKER ════════════════════════════════ -->
+<div class="ticker-outer">
+  <div class="ticker-track" id="ticker"></div>
+</div>
+
+<!-- ═══ FEATURES ══════════════════════════════ -->
+<section class="feat-sec reveal">
+  <div class="sw">
+    <div class="sh">
+      <div class="sl">// capabilities</div>
+      <h2>What kaim does</h2>
+    </div>
+    <div class="feat-grid">
+      <div class="feat-card">
+        <div class="feat-icon">🎯</div>
+        <h3>Precision Aimbot</h3>
+        <p>Fast, accurate target acquisition with configurable behaviour for supported Roblox environments.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">⚡</div>
+        <h3>One-Line Setup</h3>
+        <p>Single <code>loadstring</code> — paste into any compatible executor, run, and you're live.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🔀</div>
+        <h3>Dual Release Track</h3>
+        <p>Stable for reliability. Experimental for the latest. Both auto-fetched from GitHub live.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🗂️</div>
+        <h3>Full Version Archive</h3>
+        <p>Every release lives in the repo. Roll back to any previous version at any time.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ RELEASES ═══════════════════════════════ -->
+<section class="rel-sec reveal" id="releases">
+  <div class="sw">
+    <div class="sh">
+      <div class="sl">// get the script</div>
+      <h2>Releases</h2>
+    </div>
+
+    <div class="rel-tabs">
+      <button class="rtab on" onclick="switchTab('stable',this)">
+        <span id="tab-s-name">v8.2</span>
+        <span class="rbadge rb-s">Stable</span>
+      </button>
+      <button class="rtab" onclick="switchTab('exp',this)">
+        <span id="tab-e-name">v8.8</span>
+        <span class="rbadge rb-e">Experimental</span>
+      </button>
+    </div>
+
+    <!-- Stable panel -->
+    <div id="panel-stable" class="tpanel on">
+      <div class="cblock">
+        <div class="ctop">
+          <div class="wdots"><i class="wd1"></i><i class="wd2"></i><i class="wd3"></i></div>
+          <span class="cfname" id="fname-stable">kaim-v8.2.lua</span>
+          <button class="cpybtn" onclick="copyCode('code-stable',this)">copy</button>
+        </div>
+        <div class="cbody" id="code-stable"><span class="tk-fn">loadstring</span>(<span class="tk-kw">game</span>:<span class="tk-fn">HttpGet</span>(<span class="tk-str">"https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-v8.2.lua"</span>))()</div>
+      </div>
+    </div>
+
+    <!-- Experimental panel -->
+    <div id="panel-exp" class="tpanel">
+      <div class="cblock">
+        <div class="ctop">
+          <div class="wdots"><i class="wd1"></i><i class="wd2"></i><i class="wd3"></i></div>
+          <span class="cfname" id="fname-exp">kaim-v8.8.lua</span>
+          <button class="cpybtn" onclick="copyCode('code-exp',this)">copy</button>
+        </div>
+        <div class="cbody" id="code-exp"><span class="tk-cm">-- experimental build: may contain unstable features</span>
+<span class="tk-fn">loadstring</span>(<span class="tk-kw">game</span>:<span class="tk-fn">HttpGet</span>(<span class="tk-str">"https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-v8.8.lua"</span>))()</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ USAGE ══════════════════════════════════ -->
+<section class="steps-sec reveal">
+  <div class="sw">
+    <div class="sh">
+      <div class="sl">// how to run</div>
+      <h2>Usage</h2>
+    </div>
+    <div class="steps-list">
+      <div class="step-item">
+        <div class="step-n">01</div>
+        <div class="step-b">
+          <h4>Open your executor</h4>
+          <p>Launch a compatible Lua script executor on PC. This script does not run on mobile.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-n">02</div>
+        <div class="step-b">
+          <h4>Choose a release</h4>
+          <p>Pick Stable for a tested build, or Experimental for cutting-edge features. Both are above.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-n">03</div>
+        <div class="step-b">
+          <h4>Paste &amp; execute</h4>
+          <p>Paste the <code>loadstring</code> command into your executor and run. Activates automatically.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ NOTICE ══════════════════════════════════ -->
+<section class="notice-sec reveal">
+  <div class="sw">
+    <div class="notice-card">
+      <div class="n-icon">⚠️</div>
+      <div>
+        <h4>Config resets after major updates</h4>
+        <p>Due to frequent changes in the script's memory structure, old config files can break after major version updates. If settings fail to load, delete your old config and create a new one.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FILE TREE ══════════════════════════════ -->
+<section class="tree-sec reveal">
+  <div class="sw">
+    <div class="sh">
+      <div class="sl">// repository</div>
+      <h2>Project files</h2>
+    </div>
+
+    <div class="tree-toolbar">
+      <div class="tree-meta">sdwird/kaim · <em id="file-count">loading…</em></div>
+      <input class="tree-search" type="text" placeholder="filter files…" id="tree-search" oninput="filterTree(this.value)" autocomplete="off"/>
+    </div>
+
+    <div class="tree-box" id="tree-box">
+      <div class="tree-loading">
+        <div class="t-spin"></div>
+        Fetching from GitHub…
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ════════════════════════════════ -->
+<footer>
+  <div class="footer-in">
+    <div class="footer-logo">kaim</div>
+    <div class="footer-links">
+      <a href="https://github.com/sdwird/kaim" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/sdwird" target="_blank" rel="noopener">sdwird</a>
+      <a href="#releases">Get Script</a>
+      <a href="#" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">↑ Top</a>
+    </div>
+    <div class="footer-copy">sdwird/kaim · Lua aimbot · PC only · auto-updated from GitHub</div>
+  </div>
+</footer>
+
+</div><!-- /page -->
+
+<script>
+/* ════════════════════════════════════════════
+   CURSOR
+════════════════════════════════════════════ */
+const dot = document.getElementById('cur-dot');
+const ring= document.getElementById('cur-ring');
+let mx=0,my=0,rx=0,ry=0;
+
+document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; });
+
+(function tick(){
+  dot.style.left = mx+'px'; dot.style.top = my+'px';
+  rx += (mx-rx)*0.11; ry += (my-ry)*0.11;
+  ring.style.left = rx+'px'; ring.style.top = ry+'px';
+  requestAnimationFrame(tick);
+})();
+
+// Hover enlarge
+document.querySelectorAll('a,button,.feat-card').forEach(el=>{
+  el.addEventListener('mouseenter',()=>document.body.classList.add('cursor-hover'));
+  el.addEventListener('mouseleave',()=>document.body.classList.remove('cursor-hover'));
+});
+
+/* ════════════════════════════════════════════
+   NAV SCROLL
+════════════════════════════════════════════ */
+window.addEventListener('scroll',()=>{
+  document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 50);
+});
+
+/* ════════════════════════════════════════════
+   PARTICLE CANVAS
+════════════════════════════════════════════ */
+(function(){
+  const cv = document.getElementById('pcv');
+  const cx = cv.getContext('2d');
+  let W,H,pts=[];
+
+  function resize(){ W=cv.width=innerWidth; H=cv.height=innerHeight; }
+
+  function mkPt(){
+    return {
+      x: Math.random()*W, y: Math.random()*H,
+      vx:(Math.random()-.5)*.38, vy:(Math.random()-.5)*.38,
+      r: Math.random()*1.4+.4,
+      a: Math.random()*.45+.08
+    };
+  }
+
+  function init(){ resize(); pts=Array.from({length:65},mkPt); }
+
+  function draw(){
+    cx.clearRect(0,0,W,H);
+    for(let i=0;i<pts.length;i++){
+      const p=pts[i];
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0||p.x>W) p.vx*=-1;
+      if(p.y<0||p.y>H) p.vy*=-1;
+      cx.beginPath();
+      cx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      cx.fillStyle=`rgba(124,58,237,${p.a})`;
+      cx.fill();
+      for(let j=i+1;j<pts.length;j++){
+        const q=pts[j];
+        const dx=p.x-q.x, dy=p.y-q.y;
+        const d=dx*dx+dy*dy;
+        if(d<13000){
+          const op=(1-d/13000)*.1;
+          cx.beginPath(); cx.moveTo(p.x,p.y); cx.lineTo(q.x,q.y);
+          cx.strokeStyle=`rgba(124,58,237,${op})`; cx.lineWidth=.5; cx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize',()=>{ resize(); });
+  init(); draw();
+})();
+
+/* ════════════════════════════════════════════
+   GLITCH EFFECT
+════════════════════════════════════════════ */
+const gw = document.querySelector('.glitch-w');
+function glitch(){
+  gw.classList.add('fire');
+  setTimeout(()=>gw.classList.remove('fire'), 460);
+}
+setTimeout(glitch, 1800); // first pop shortly after load
+setInterval(glitch, 4200);
+
+/* ════════════════════════════════════════════
+   SCROLL REVEAL
+════════════════════════════════════════════ */
+const ro = new IntersectionObserver(entries=>{
+  entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('on'); });
+},{threshold:.08});
+document.querySelectorAll('.reveal').forEach(s=>ro.observe(s));
+
+/* ════════════════════════════════════════════
+   TABS
+════════════════════════════════════════════ */
+function switchTab(id, btn){
+  document.querySelectorAll('.tpanel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.rtab').forEach(b=>b.classList.remove('on'));
+  document.getElementById('panel-'+id).classList.add('on');
+  btn.classList.add('on');
+}
+
+/* ════════════════════════════════════════════
+   COPY CODE
+════════════════════════════════════════════ */
+function copyCode(id, btn){
+  const el = document.getElementById(id);
+  const lines = el.innerText.split('\n');
+  // grab only the loadstring line
+  const text = lines.find(l=>l.trim().startsWith('loadstring')) || el.innerText;
+  navigator.clipboard.writeText(text.trim()).then(()=>{
+    btn.textContent='✓ copied';
+    btn.classList.add('ok');
+    setTimeout(()=>{ btn.textContent='copy'; btn.classList.remove('ok'); }, 2400);
+  });
+}
+
+/* ════════════════════════════════════════════
+   COUNT UP
+════════════════════════════════════════════ */
+function countUp(el, target, dur=1100){
+  if(target <= 0){ el.textContent='0'; return; }
+  const start=Date.now();
+  (function f(){
+    const t=Math.min((Date.now()-start)/dur,1);
+    const e=1-Math.pow(1-t,3);
+    el.textContent=Math.round(e*target);
+    if(t<1) requestAnimationFrame(f);
+  })();
+}
+
+/* ════════════════════════════════════════════
+   VERSION PARSING
+════════════════════════════════════════════ */
+function verScore(name){
+  const m=name.match(/kaim-v(\d+)[._]?(\d*)/);
+  if(!m) return 0;
+  return parseInt(m[1])*100+(m[2]?parseInt(m[2]):0);
+}
+
+/* ════════════════════════════════════════════
+   BUILD TICKER
+════════════════════════════════════════════ */
+function buildTicker(versions){
+  const fallback=['kaim-v8.8','kaim-v8.2','kaim-v7.8','kaim-v6.5','kaim-v4.1','kaim-v3.3'];
+  const items=(versions.length ? versions.map(v=>v.replace('.lua','')) : fallback);
+  const extras=['Lua 5.1','PC Only','Roblox','auto-updated','sdwird/kaim'];
+  const all=[...items,...extras];
+  // duplicate for seamless loop
+  const html=[...all,...all].map(x=>
+    `<span class="ticker-item"><span class="t-dot"></span>${x}</span>`
+  ).join('');
+  document.getElementById('ticker').innerHTML=html;
+}
+
+/* ════════════════════════════════════════════
+   RENDER FILE TREE
+════════════════════════════════════════════ */
+let treeFiles=[];
+function renderTree(files, expFile, stableFile){
+  const box=document.getElementById('tree-box');
+  box.innerHTML=`<div class="tree-dir">kaim/</div>`;
+  files.forEach((f,i)=>{
+    const isExp    = f===expFile;
+    const isStable = f===stableFile;
+    const isReadme = f==='README.md';
+    let badge='', cls='tree-file';
+    if(isExp)    { badge='<span class="tbadge tb-l">latest</span>'; cls='tree-main'; }
+    if(isStable) { badge='<span class="tbadge tb-s">stable</span>'; cls='tree-main'; }
+    if(isReadme) { badge='<span class="tbadge tb-r">readme</span>'; cls='tree-main'; }
+    const row=document.createElement('div');
+    row.className='tree-row';
+    row.setAttribute('data-name',f.toLowerCase());
+    row.style.animationDelay=(i*28)+'ms';
+    row.innerHTML=`<span>├── <span class="${cls}">${f}</span></span>${badge}`;
+    box.appendChild(row);
+  });
+}
+
+function filterTree(q){
+  document.querySelectorAll('.tree-row').forEach(r=>{
+    r.style.display=r.getAttribute('data-name').includes(q.toLowerCase())?'':'none';
+  });
+}
+
+/* ════════════════════════════════════════════
+   GITHUB API
+════════════════════════════════════════════ */
+const OWNER='sdwird', REPO='kaim';
+const BASE_RAW=`https://raw.githubusercontent.com/${OWNER}/${REPO}/refs/heads/main/`;
+const FALLBACK_FILES=[
+  'README.md','kaim-v8.8.lua','kaim-v8.2.lua','kaim-v8.7.lua',
+  'kaim-v7.8.lua','kaim-v6.5.lua','kaim-v6.0.lua','kaim-v4.1.lua',
+  'kaim-v3.3.lua','kaim-v3.lua','doors.lua',
+  'parkour-legacy-bagesp.lua','parkour-reborn-autofarm.lua',
+  'rake-remastered.lua','yba-script.lua'
+];
+
+function setCodeBlock(tab, filename, url, isExp){
+  document.getElementById('fname-'+tab).textContent=filename;
+  document.getElementById('tab-'+(tab==='stable'?'s':'e')+'-name').textContent=
+    filename.replace('kaim-','').replace('.lua','');
+  const line=
+    `<span class="tk-fn">loadstring</span>`+
+    `(<span class="tk-kw">game</span>:<span class="tk-fn">HttpGet</span>`+
+    `(<span class="tk-str">"${url}"</span>))()`;
+  document.getElementById('code-'+tab).innerHTML=isExp
+    ? `<span class="tk-cm">-- experimental build: may contain unstable features</span>\n${line}`
+    : line;
+}
+
+async function loadGitHub(){
+  // ── Repo stats ──────────────────────────
+  try {
+    const r=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}`);
+    if(r.ok){
+      const d=await r.json();
+      countUp(document.getElementById('s-stars'), d.stargazers_count||0);
+      countUp(document.getElementById('s-forks'), d.forks_count||0);
+    }
+  } catch(_){}
+
+  // ── File tree ────────────────────────────
+  let files=[];
+  try {
+    const r=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/trees/main?recursive=1`);
+    if(!r.ok) throw new Error('rate-limited');
+    const d=await r.json();
+    files=d.tree.filter(f=>f.type==='blob').map(f=>f.path);
+  } catch(_){
+    files=FALLBACK_FILES;
+  }
+
+  treeFiles=files;
+
+  // ── Detect versions ──────────────────────
+  const kaimVers=files
+    .filter(f=>/^kaim-v[\d]+\.[\d.]*lua$/.test(f))
+    .sort((a,b)=>verScore(b)-verScore(a));
+
+  const expFile    = kaimVers[0] || 'kaim-v8.8.lua';
+  const stableFile = kaimVers[1] || 'kaim-v8.2.lua';
+
+  // ── Update nav ───────────────────────────
+  document.getElementById('nver').textContent=
+    expFile.replace('kaim-','').replace('.lua','');
+
+  // ── Update code blocks ───────────────────
+  setCodeBlock('stable', stableFile, BASE_RAW+stableFile, false);
+  setCodeBlock('exp',    expFile,    BASE_RAW+expFile,    true);
+
+  // ── Versions count ───────────────────────
+  countUp(document.getElementById('s-vers'), kaimVers.length||9);
+
+  // ── File count ───────────────────────────
+  document.getElementById('file-count').innerHTML=
+    `<em>${files.length}</em> file${files.length!==1?'s':''}`;
+
+  // ── Render tree ──────────────────────────
+  renderTree(files, expFile, stableFile);
+
+  // ── Ticker ───────────────────────────────
+  buildTicker(kaimVers);
+}
+
+loadGitHub();
+</script>
+</body>
+</html>
