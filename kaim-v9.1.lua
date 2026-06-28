@@ -1394,3 +1394,7 @@ end))
 T.Home:Select()
 SM:LoadAutoloadConfig()
 Lib:Notify("KAIM v8.8 loaded — Press K to toggle.", 4)
+
+end, debug.traceback)
+if not ok then warn("KAIM FATAL:\n"..tostring(err)) end
+end)
