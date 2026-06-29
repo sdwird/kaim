@@ -1,627 +1,224 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark scroll-smooth">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<meta name="description" content="kaim — Lua aimbot script for Roblox. One loadstring, instant activation."/>
-<title>kaim - Obsidian</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
-<style>
-:root {
-  /* Obsidian UI Dark Theme Palette */
-  --bg:       #050505;
-  --surface:  #0a0a0a;
-  --card:     #0f0f0f;
-  --card2:    #141414;
-  --border:   #222222;
-  --border2:  #333333;
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="description" content="kaim — Lua aimbot script for Roblox. Powered by Obsidian UI."/>
+  <title>kaim | Obsidian UI</title>
   
-  /* Accents */
-  --accent:   #e2e2e2;
-  --accent-hover: #ffffff;
-  --primary:  #ffffff;
-  --snow:     #f5f5f5;
-  --muted:    #888888;
-  --dim:      #555555;
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   
-  /* Status Colors */
-  --green:    #10b981;
-  --amber:    #f59e0b;
-  --red:      #ef4444;
-  
-  /* Glows */
-  --glow:     rgba(255, 255, 255, 0.08);
-  --glow2:    rgba(255, 255, 255, 0.03);
-}
+  <!-- Obsidian Web Component -->
+  <script src="https://www.mspaint.cc/widgets/obsidian.js"></script>
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 
-body {
-  background: var(--bg);
-  color: var(--snow);
-  font-family: 'Inter', sans-serif;
-  font-size: 15px;
-  line-height: 1.7;
-  overflow-x: hidden;
-  cursor: none; /* Custom cursor */
-}
-
-/* Subtle background grid */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image: 
-    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* ── CUSTOM CURSOR (Obsidian Style) ─────────────────────────────────── */
-#cd, #cr { position: fixed; border-radius: 50%; pointer-events: none; z-index: 9999; transform: translate(-50%, -50%); }
-#cd { width: 4px; height: 4px; background: var(--primary); box-shadow: 0 0 8px var(--primary); }
-#cr { width: 32px; height: 32px; border: 1px solid rgba(255,255,255,0.2); transition: width 0.2s, height 0.2s, border-color 0.2s, background 0.2s; backdrop-filter: grayscale(100%); }
-.ch #cr { width: 46px; height: 46px; border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.05); }
-
-/* ── CANVAS ──────────────────────────────────── */
-#pv { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.5; }
-
-/* ── PAGE ────────────────────────────────────── */
-.pg { position: relative; z-index: 1; }
-
-/* ── NAV (Glassmorphic) ─────────────────────────────────────── */
-#nav { position: fixed; top: 0; left: 0; right: 0; z-index: 200; padding: 0 28px; border-bottom: 1px solid transparent; transition: background 0.4s, border-color 0.4s; }
-#nav.sc { background: rgba(5, 5, 5, 0.7); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); }
-.ni { max-width: 1000px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 70px; }
-.nl { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #fff; font-weight: 700; font-size: 18px; letter-spacing: -0.02em; }
-.nd { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); box-shadow: 0 0 10px var(--primary); }
-
-.nr { display: flex; align-items: center; gap: 16px; }
-.nv { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); background: var(--card); border: 1px solid var(--border); padding: 6px 14px; border-radius: 6px; }
-.nv em { font-style: normal; color: var(--primary); font-weight: 600; }
-.ng { display: flex; align-items: center; gap: 8px; color: var(--snow); text-decoration: none; font-size: 13px; font-weight: 500; padding: 8px 18px; border: 1px solid var(--border); border-radius: 6px; background: rgba(255,255,255,0.02); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-.ng:hover { border-color: var(--primary); color: var(--bg); background: var(--primary); transform: translateY(-1px); }
-
-/* ── HERO ────────────────────────────────────── */
-.hero { min-height: 100vh; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; padding: 100px 24px 60px; text-align: center; }
-.hero::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 50% 40%, rgba(255,255,255,0.03) 0%, transparent 60%); pointer-events: none; }
-
-.hc { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; }
-.heb { display: inline-flex; align-items: center; gap: 10px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 24px; opacity: 0; animation: fu 0.8s 0.1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; border: 1px solid var(--border); padding: 6px 16px; border-radius: 20px; background: var(--glow2); }
-.elv { width: 5px; height: 5px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-
-.ht { font-size: clamp(72px, 15vw, 140px); font-weight: 800; letter-spacing: -0.05em; line-height: 0.9; margin-bottom: 24px; opacity: 0; animation: fu 0.8s 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; color: #fff; text-shadow: 0 0 40px rgba(255,255,255,0.1); }
-
-.hs { font-size: 18px; color: var(--muted); max-width: 480px; margin-bottom: 40px; opacity: 0; animation: fu 0.8s 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; line-height: 1.6; }
-
-.hcta { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 60px; opacity: 0; animation: fu 0.8s 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
-.bp { display: inline-flex; align-items: center; gap: 8px; background: var(--primary); color: var(--bg); text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 14px; box-shadow: 0 0 20px rgba(255,255,255,0.15); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-.bp:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(255,255,255,0.25); background: #fff; }
-.bg { display: inline-flex; align-items: center; gap: 8px; color: var(--snow); text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 500; font-size: 14px; border: 1px solid var(--border2); background: rgba(255,255,255,0.02); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-.bg:hover { border-color: var(--primary); background: rgba(255,255,255,0.05); transform: translateY(-2px); }
-
-.hst { display: flex; align-items: center; gap: 48px; opacity: 0; animation: fu 0.8s 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
-.si { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.sn { font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 600; color: #fff; line-height: 1; text-shadow: 0 0 20px rgba(255,255,255,0.1); }
-.sl { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.15em; font-weight: 600; }
-.sd { width: 1px; height: 40px; background: var(--border); }
-
-/* ── STATS STRIPE (Obsidian Minimal) ────────────────────────────── */
-.stripe { background: rgba(10,10,10,0.5); backdrop-filter: blur(10px); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 24px 0; }
-.stripe-in { max-width: 1000px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; }
-.stripe-item { display: flex; align-items: center; gap: 14px; }
-.str-icon { font-size: 18px; filter: grayscale(100%) brightness(1.5); }
-.str-text { display: flex; flex-direction: column; }
-.str-val { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; color: #fff; }
-.str-lbl { font-size: 12px; color: var(--muted); }
-.stripe-div { width: 1px; height: 24px; background: var(--border); }
-
-/* ── TICKER ──────────────────────────────────── */
-.tk-outer { overflow: hidden; border-bottom: 1px solid var(--border); padding: 14px 0; background: var(--bg); }
-.tk-track { display: flex; gap: 64px; white-space: nowrap; width: max-content; animation: tscroll 30s linear infinite; }
-.tk-item { display: flex; align-items: center; gap: 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim); letter-spacing: 0.08em; text-transform: uppercase; }
-.tk-dot { width: 4px; height: 4px; background: var(--muted); transform: rotate(45deg); }
-@keyframes tscroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-
-/* ── SECTION BASE ────────────────────────────── */
-.rev { opacity: 0; transform: translateY(30px); transition: opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.rev.on { opacity: 1; transform: translateY(0); }
-.sw { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
-.sh { margin-bottom: 48px; }
-.slb { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-.slb::before { content: ''; display: block; width: 24px; height: 1px; background: var(--border2); }
-.sh h2 { font-size: 36px; font-weight: 700; letter-spacing: -0.03em; color: #fff; line-height: 1.2; }
-.sh p { font-size: 16px; color: var(--muted); margin-top: 12px; max-width: 540px; line-height: 1.6; }
-
-/* ── FEATURES BENTO (Obsidian Style) ──────────────────────────── */
-.feat-sec { padding: 120px 0; }
-.bento { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-.bc {
-  position: relative; background: var(--card);
-  border: 1px solid var(--border); border-radius: 8px;
-  padding: 36px 32px; overflow: hidden; cursor: default;
-  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.bc::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.04) 0%, transparent 70%); opacity: 0; transition: opacity 0.4s; pointer-events: none; }
-.bc:hover::before { opacity: 1; }
-.bc:hover { border-color: var(--muted); transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
-.bc.wide { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 40px; background: linear-gradient(145deg, #0a0a0a 0%, #111 100%); }
-.bi { font-size: 24px; margin-bottom: 24px; filter: grayscale(100%); opacity: 0.8; }
-.bc h3 { font-size: 18px; font-weight: 600; color: #fff; margin-bottom: 12px; letter-spacing: -0.01em; }
-.bc p { font-size: 14px; color: var(--muted); line-height: 1.7; }
-.wide-text h3 { font-size: 24px; }
-.wide-visual { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 10px; padding: 24px; background: #000; border-radius: 6px; border: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; font-size: 12px; box-shadow: inset 0 0 20px rgba(255,255,255,0.02); }
-.wv-line { display: flex; align-items: center; gap: 10px; color: var(--dim); }
-.wv-line .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.dot-green { background: var(--green); }
-.dot-amber { background: var(--amber); }
-.dot-purple { background: var(--primary); }
-.wv-line span { color: var(--muted); }
-.sync-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.03); border: 1px solid var(--border2); padding: 6px 14px; border-radius: 4px; font-size: 11px; color: var(--primary); margin-top: 16px; font-family: 'JetBrains Mono', monospace; }
-.sync-spin { width: 12px; height: 12px; border: 2px solid rgba(255,255,255,0.1); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* ── TERMINAL (Obsidian) ────────────────────────────────── */
-.term-sec { padding: 0 0 120px; }
-.term-wrap { background: #000; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; max-width: 800px; margin: 0 auto; box-shadow: 0 30px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.02); }
-.term-top { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid var(--border); background: #050505; }
-.tdots { display: flex; gap: 8px; }
-.tdots i { display: block; width: 10px; height: 10px; border-radius: 50%; background: var(--border2); }
-.tname { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; color: var(--dim); letter-spacing: 0.05em; }
-.term-body { padding: 30px; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 2.2; min-height: 240px; }
-.tline { display: flex; align-items: flex-start; gap: 12px; opacity: 0; animation: fadein 0.3s ease forwards; }
-.tprompt { color: var(--dim); flex-shrink: 0; user-select: none; }
-.tcmd { color: #e2e2e2; }
-.tinfo { color: var(--muted); }
-.tok { color: var(--snow); }
-.tcursor { display: inline-block; width: 8px; height: 16px; background: var(--primary); vertical-align: middle; animation: blink 1s step-end infinite; margin-left: 4px; }
-@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-@keyframes fadein { to { opacity: 1; } }
-
-/* ── RELEASES ────────────────────────────────── */
-.rel-sec { padding: 0 0 120px; }
-.rtabs { display: flex; gap: 12px; margin-bottom: 24px; }
-.rtab { display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 12px 24px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--muted); cursor: pointer; transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.rtab:hover { border-color: var(--muted); color: var(--snow); }
-.rtab.on { border-color: var(--primary); background: var(--border); color: #fff; }
-.rbg { font-size: 10px; padding: 3px 10px; border-radius: 4px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
-.rbs { background: rgba(255,255,255,0.05); color: var(--muted); }
-.rbe { background: rgba(255,255,255,0.1); color: var(--snow); }
-.rtab.on .rbs, .rtab.on .rbe { background: var(--primary); color: var(--bg); }
-
-.cb { background: #000; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-.ctop { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--border); background: #050505; }
-.wd { display: flex; gap: 8px; }
-.wd i { display: block; width: 10px; height: 10px; border-radius: 50%; background: var(--border2); }
-.cfn { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); }
-.cpb { background: transparent; border: 1px solid var(--border2); color: var(--snow); font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.05em; padding: 6px 16px; border-radius: 4px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; }
-.cpb:hover { background: var(--primary); color: var(--bg); border-color: var(--primary); }
-.cpb.ok { background: var(--green); color: var(--bg); border-color: var(--green); }
-.cbod { padding: 24px 28px; font-family: 'JetBrains Mono', monospace; font-size: 14px; line-height: 2; overflow-x: auto; white-space: pre; }
-.kw { color: #888; } .fn { color: #ccc; } .st { color: #fff; } .cm { color: var(--dim); font-style: italic; }
-.tp { display: none; } .tp.on { display: block; animation: fadein 0.4s ease; }
-
-/* ── USAGE STEPS ─────────────────────────────── */
-.use-sec { padding: 0 0 120px; }
-.steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-.sc-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 40px 32px; transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.sc-card:hover { border-color: var(--muted); transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
-.snum { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; color: var(--primary); background: rgba(255,255,255,0.05); border: 1px solid var(--border2); border-radius: 4px; padding: 4px 12px; display: inline-flex; align-items: center; margin-bottom: 24px; }
-.sc-card h4 { font-size: 18px; font-weight: 600; color: #fff; margin-bottom: 12px; }
-.sc-card p { font-size: 14px; color: var(--muted); line-height: 1.7; }
-.sc-card code { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--snow); background: var(--border); padding: 2px 8px; border-radius: 4px; }
-
-/* ── FILE TREE ───────────────────────────────── */
-.tree-sec { padding: 0 0 120px; }
-.ttbar { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
-.tmeta { flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--dim); }
-.tmeta em { font-style: normal; color: var(--snow); font-weight: 600; }
-.tsearch { background: var(--card); border: 1px solid var(--border); border-radius: 6px; color: var(--snow); font-family: 'JetBrains Mono', monospace; font-size: 13px; padding: 10px 16px; outline: none; width: 240px; transition: border-color 0.2s; }
-.tsearch:focus { border-color: var(--muted); }
-.tsearch::placeholder { color: var(--dim); }
-.tbox { background: #000; border: 1px solid var(--border); border-radius: 8px; padding: 28px 32px; font-family: 'JetBrains Mono', monospace; font-size: 14px; line-height: 2.2; min-height: 240px; }
-.tdir { color: var(--snow); font-weight: 600; margin-bottom: 8px; }
-.tmain { color: #ddd; }
-.tfile { color: var(--dim); }
-.trow { display: flex; align-items: center; gap: 12px; opacity: 0; animation: fadein 0.3s ease forwards; transition: color 0.2s; }
-.trow:hover .tfile { color: var(--snow); }
-.tbg { font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
-.tbl { background: rgba(255,255,255,0.1); color: var(--snow); }
-.tbs { background: rgba(255,255,255,0.05); color: var(--muted); }
-.tbr { border: 1px solid var(--border2); color: var(--dim); }
-.tloading { display: flex; align-items: center; gap: 12px; color: var(--dim); padding: 32px 0; }
-.tspin { width: 16px; height: 16px; border: 2px solid var(--border2); border-top-color: var(--snow); border-radius: 50%; animation: spin 0.6s linear infinite; }
-
-/* ── NOTICE ──────────────────────────────────── */
-.notc-sec { padding: 0 0 120px; }
-.notc { background: rgba(255,255,255,0.02); border: 1px solid var(--border2); border-radius: 8px; padding: 32px; display: flex; gap: 24px; align-items: flex-start; }
-.ni2 { font-size: 24px; flex-shrink: 0; filter: grayscale(100%); }
-.notc h4 { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 8px; }
-.notc p { font-size: 14px; color: var(--muted); line-height: 1.7; }
-
-/* ── FOOTER ──────────────────────────────────── */
-footer { border-top: 1px solid var(--border); padding: 60px 24px 80px; background: #000; }
-.fi { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; }
-.flogo { font-size: 24px; font-weight: 800; letter-spacing: -0.05em; color: #fff; margin-bottom: 24px; }
-.flinks { display: flex; gap: 32px; justify-content: center; margin-bottom: 32px; flex-wrap: wrap; }
-.flinks a { color: var(--muted); text-decoration: none; font-size: 14px; transition: color 0.2s; font-weight: 500; }
-.flinks a:hover { color: var(--snow); }
-.fcopy { font-size: 13px; color: var(--dim); font-family: 'JetBrains Mono', monospace; }
-
-/* ── UTILS ───────────────────────────────────── */
-@keyframes fu { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-@media (prefers-reduced-motion: reduce) { * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
-@media (max-width: 860px) {
-  body { cursor: auto; } #cd, #cr { display: none; }
-  .ht { font-size: 64px; } .bento { grid-template-columns: 1fr; } .bc.wide { grid-template-columns: 1fr; }
-  .steps-grid { grid-template-columns: 1fr; } .stripe-div { display: none; }
-  .wide-visual { display: none; } .hst { gap: 24px; flex-wrap: wrap; justify-content: center; }
-}
-@media (max-width: 540px) { .nr .nv { display: none; } .hero { padding-top: 140px; } }
-</style>
+  <style type="text/tailwindcss">
+    @theme {
+      --color-obsidian-bg: #050505;
+      --color-obsidian-surface: #0a0a0a;
+      --color-obsidian-card: #0f0f0f;
+      --color-obsidian-border: #222222;
+      --font-sans: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    
+    body {
+      background-color: var(--color-obsidian-bg);
+      color: #e5e5e5;
+      font-family: var(--font-sans);
+    }
+    
+    /* Required for Obsidian Scrollbar Styling */
+    .no-scrollbar {
+      -ms-overflow-style: none; /* IE and Edge */
+      scrollbar-width: none;    /* Firefox */
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      width: 0px;
+      height: 0px;
+      display: none;            /* Chrome, Safari, Opera */
+    }
+    
+    .glass-nav {
+      background: rgba(5, 5, 5, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--color-obsidian-border);
+    }
+  </style>
 </head>
-<body>
+<body class="antialiased selection:bg-white selection:text-black min-h-screen flex flex-col">
 
-<div id="cd"></div><div id="cr"></div>
-<canvas id="pv"></canvas>
-
-<div class="pg">
-
-<nav id="nav">
-  <div class="ni">
-    <a href="#" class="nl">kaim<span class="nd"></span></a>
-    <div class="nr">
-      <div class="nv">latest: <em id="nver">—</em></div>
-      <a href="https://github.com/sdwird/kaim" target="_blank" rel="noopener" class="ng">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.341-3.369-1.341-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
-        GitHub
-      </a>
-    </div>
-  </div>
-</nav>
-
-<section class="hero">
-  <div class="hc">
-    <div class="heb"><span class="elv"></span>Lua · Roblox Executor · PC Only</div>
-    <h1 class="ht">kaim</h1>
-    <p class="hs">Precision aimbot script. One loadstring, instant activation, always current.</p>
-    <div class="hcta">
-      <a href="#releases" class="bp">Get the Script ↓</a>
-      <a href="https://github.com/sdwird/kaim" target="_blank" rel="noopener" class="bg">View on GitHub ↗</a>
-    </div>
-    <div class="hst">
-      <div class="si"><span class="sn" id="ss">—</span><span class="sl">Stars</span></div>
-      <span class="sd"></span>
-      <div class="si"><span class="sn" id="sf">—</span><span class="sl">Forks</span></div>
-      <span class="sd"></span>
-      <div class="si"><span class="sn" id="sv">—</span><span class="sl">Versions</span></div>
-    </div>
-  </div>
-</section>
-
-<div class="stripe">
-  <div class="stripe-in">
-    <div class="stripe-item"><div class="str-icon">🎯</div><div class="str-text"><span class="str-val">Lua 5.1</span><span class="str-lbl">Language</span></div></div>
-    <div class="stripe-div"></div>
-    <div class="stripe-item"><div class="str-icon">💻</div><div class="str-text"><span class="str-val">PC Only</span><span class="str-lbl">Platform</span></div></div>
-    <div class="stripe-div"></div>
-    <div class="stripe-item"><div class="str-icon">⚡</div><div class="str-text"><span class="str-val">1 Line</span><span class="str-lbl">Setup</span></div></div>
-    <div class="stripe-div"></div>
-    <div class="stripe-item"><div class="str-icon">🔄</div><div class="str-text"><span class="str-val">Auto-Updated</span><span class="str-lbl">From GitHub</span></div></div>
-    <div class="stripe-div"></div>
-    <div class="stripe-item"><div class="str-icon">📦</div><div class="str-text"><span class="str-val" id="stripe-vers">9+</span><span class="str-lbl">Versions</span></div></div>
-  </div>
-</div>
-
-<div class="tk-outer"><div class="tk-track" id="tkr"></div></div>
-
-<section class="feat-sec rev">
-  <div class="sw">
-    <div class="sh">
-      <div class="slb">why kaim</div>
-      <h2>Everything you need.<br>Nothing you don't.</h2>
-      <p>Built lean, runs fast. Every feature is here for a reason.</p>
-    </div>
-    <div class="bento">
-
-      <div class="bc">
-        <div class="bi">🎯</div>
-        <h3>Precision Targeting</h3>
-        <p>Fast, accurate target lock built for Roblox executor environments. Configurable sensitivity and behavior.</p>
+  <!-- Navigation -->
+  <nav class="fixed top-0 w-full z-50 glass-nav transition-all duration-300">
+    <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <span class="text-white font-extrabold text-2xl tracking-tighter">kaim</span>
+        <div class="w-2 h-2 rounded-full bg-white shadow-[0_0_10px_#fff] animate-pulse"></div>
       </div>
-
-      <div class="bc">
-        <div class="bi">⚡</div>
-        <h3>One-Line Activation</h3>
-        <p>A single <code>loadstring</code> command is all it takes. Paste into any executor and run — zero setup.</p>
+      <div class="flex items-center gap-6">
+        <div class="hidden sm:flex items-center gap-2 text-xs font-mono text-zinc-500 bg-obsidian-card border border-obsidian-border px-4 py-2 rounded-md">
+          v10.2 <span class="text-white font-semibold">OBSIDIAN BUILD</span>
+        </div>
+        <a href="https://github.com/sdwird/kaim" target="_blank" class="text-sm font-medium text-zinc-400 hover:text-white transition-colors flex items-center gap-2">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .08 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z" clip-rule="evenodd"></path></svg>
+          GitHub
+        </a>
       </div>
+    </div>
+  </nav>
 
-      <div class="bc">
-        <div class="bi">📦</div>
-        <h3>Version Archive</h3>
-        <p>Every release is preserved in the repo from v3 to v8.8. Roll back to any version at any time.</p>
+  <!-- Hero & UI Showcase -->
+  <main class="relative flex-1 pt-32 pb-24 overflow-hidden">
+    <!-- Grid Background -->
+    <div class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:64px_64px] pointer-events-none -z-10 [mask-image:radial-gradient(ellipse_60%_60%_at_50%_40%,#000_10%,transparent_100%)]"></div>
+    
+    <div class="max-w-7xl mx-auto px-6 grid xl:grid-cols-2 gap-16 items-center">
+      
+      <!-- Left Column: Copy -->
+      <div class="flex flex-col items-start text-left z-10">
+        <div class="inline-flex items-center gap-2 font-mono text-xs tracking-widest uppercase text-zinc-400 mb-8 border border-obsidian-border bg-[rgba(255,255,255,0.02)] px-5 py-2.5 rounded-full shadow-lg">
+          <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></div>
+          Lua / PC Only
+        </div>
+        
+        <h1 class="text-7xl sm:text-8xl lg:text-[7rem] font-extrabold text-white tracking-tighter leading-[0.95] mb-8">
+          kaim<br>
+          <span class="text-transparent bg-clip-text bg-gradient-to-br from-zinc-100 via-zinc-400 to-zinc-700">obsidian.</span>
+        </h1>
+        
+        <p class="text-xl text-zinc-400 max-w-lg mb-12 leading-relaxed">
+          The ultimate precision aimbot script, fully rebuilt on the sleek and modern Obsidian UI library. Experience zero-latency performance with a stunning interface.
+        </p>
+        
+        <div class="flex flex-wrap gap-4">
+          <a href="#install" class="px-8 py-4 bg-white text-black font-semibold rounded-lg shadow-[0_0_20px_rgba(255,255,255,0.15)] hover:shadow-[0_0_35px_rgba(255,255,255,0.3)] hover:-translate-y-1 transition-all duration-300">
+            Copy Loadstring
+          </a>
+          <a href="#extractor" class="px-8 py-4 bg-obsidian-surface border border-obsidian-border text-white font-medium rounded-lg hover:bg-white/5 hover:border-zinc-500 transition-all duration-300">
+            UI Extractor
+          </a>
+        </div>
       </div>
-
-      <div class="bc wide">
-        <div class="wide-text">
-          <div class="bi">🔄</div>
-          <h3>Always Up to Date</h3>
-          <p>This page fetches live data from the GitHub API every time it loads. The file tree, version names, and script URLs all update automatically the moment you push a new file.</p>
-          <div class="sync-badge">
-            <div class="sync-spin"></div>
-            Live-synced from sdwird/kaim
+      
+      <!-- Right Column: Interactive Obsidian UI Component -->
+      <div class="relative group mx-auto w-full max-w-[600px] xl:max-w-none">
+        <!-- Glow effect behind widget -->
+        <div class="absolute -inset-2 bg-gradient-to-b from-white/10 to-transparent blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none rounded-2xl"></div>
+        
+        <!-- Web Component Container -->
+        <div class="relative rounded-[14px] overflow-hidden border border-obsidian-border bg-[#0a0a0a] shadow-2xl h-[520px] transition-transform duration-500 group-hover:scale-[1.01]">
+          
+          <!-- OBSIDIAN WIDGET -->
+          <Obsidian
+            title="kaim"
+            footer="version: 10.2 (experimental)"
+            icon="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/GitHub_Invertocat_Logo.svg/1200px-GitHub_Invertocat_Logo.svg.png"
+            ui-data-src="https://raw.githubusercontent.com/mspaint-cc/webmspaint/refs/heads/main/registry/obsidian-demo/ObsidianExtracted.json">
+          </Obsidian>
+          
+        </div>
+        
+        <!-- Tooltip Context -->
+        <div class="absolute -bottom-16 left-0 right-0 flex justify-center opacity-75 group-hover:opacity-100 transition-opacity">
+          <div class="text-xs font-mono text-zinc-400 bg-obsidian-surface border border-obsidian-border px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg">
+            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+            Interactive web preview (using demo UI payload)
           </div>
         </div>
-        <div class="wide-visual">
-          <div class="wv-line"><span class="dot dot-green"></span><span>fetching sdwird/kaim tree…</span></div>
-          <div class="wv-line"><span class="dot dot-amber"></span><span>sorting versions by semver…</span></div>
-          <div class="wv-line"><span class="dot dot-purple"></span><span>latest detected: <em id="wv-ver" style="font-style:normal;color:var(--primary)">kaim-v8.8</em></span></div>
-          <div class="wv-line"><span class="dot dot-green"></span><span>code blocks updated ✓</span></div>
-          <div class="wv-line"><span class="dot dot-green"></span><span>file tree rendered ✓</span></div>
+      </div>
+      
+    </div>
+  </main>
+
+  <!-- Extractor Tool Section -->
+  <section id="extractor" class="py-24 border-t border-obsidian-border bg-obsidian-surface">
+    <div class="max-w-4xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <h2 class="text-4xl font-extrabold text-white mb-6">Render Your Custom Config</h2>
+        <p class="text-lg text-zinc-400">Want to see your exact kaim config in the browser instead of the demo? You can dump your live UI directly to a JSON file using the Obsidian Extractor.</p>
+      </div>
+      
+      <div class="bg-black border border-obsidian-border rounded-2xl p-8 lg:p-12 shadow-2xl relative overflow-hidden">
+        <div class="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+          <svg class="w-32 h-32 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2.5L17.5 9H13V4.5zM6 20V4h5v7h7v9H6z"/></svg>
+        </div>
+
+        <h3 class="text-xl font-bold text-white mb-4">1. Run the Extractor Script</h3>
+        <p class="text-zinc-400 mb-6">Execute this snippet in your executor while kaim is running.</p>
+        
+        <div class="bg-obsidian-card p-5 rounded-xl border border-obsidian-border font-mono text-sm mb-10 overflow-x-auto">
+          <span class="text-zinc-600">-- Extractor</span><br>
+          <span class="text-purple-400">loadstring</span>(<span class="text-blue-400">game</span>:<span class="text-emerald-400">HttpGet</span>(<span class="text-white">"https://raw.githubusercontent.com/mspaint-cc/assets/refs/heads/main/uidata/extractor.lua"</span>))()
+        </div>
+
+        <h3 class="text-xl font-bold text-white mb-4">2. Update the HTML</h3>
+        <p class="text-zinc-400 mb-6">
+          The script saves a file named <code class="text-white bg-white/10 px-2 py-1 rounded">ObsidianExtracted.json</code> in your executor's workspace folder. Place that file in your website directory and update the HTML tag:
+        </p>
+
+        <div class="bg-obsidian-card p-5 rounded-xl border border-obsidian-border font-mono text-sm overflow-x-auto">
+          <span class="text-zinc-500">&lt;</span><span class="text-pink-400">Obsidian</span><br>
+          &nbsp;&nbsp;<span class="text-amber-300">title</span><span class="text-white">=</span><span class="text-emerald-300">"kaim"</span><br>
+          &nbsp;&nbsp;<span class="text-amber-300">ui-data-src</span><span class="text-white">=</span><span class="text-emerald-300">"./ObsidianExtracted.json"</span><span class="text-zinc-500">&gt;</span><br>
+          <span class="text-zinc-500">&lt;/</span><span class="text-pink-400">Obsidian</span><span class="text-zinc-500">&gt;</span>
         </div>
       </div>
-
-      <div class="bc">
-        <div class="bi">⚙️</div>
-        <h3>Config System</h3>
-        <p>Save and reload your custom settings. If a major update breaks your config, simply delete and recreate it.</p>
-      </div>
-
-      <div class="bc">
-        <div class="bi">🔀</div>
-        <h3>Stable &amp; Experimental</h3>
-        <p>Two release tracks. The stable build for reliability, the experimental build for cutting-edge updates.</p>
-      </div>
-
     </div>
-  </div>
-</section>
+  </section>
 
-<section class="term-sec rev">
-  <div class="sw">
-    <div class="sh">
-      <div class="slb">in action</div>
-      <h2>Watch it load</h2>
-      <p>A look at what happens when you execute kaim in your executor.</p>
-    </div>
-    <div class="term-wrap">
-      <div class="term-top">
-        <div class="tdots"><i class="td1"></i><i class="td2"></i><i class="td3"></i></div>
-        <span class="tname">kaim executor — Lua 5.1</span>
-        <div style="width:30px"></div>
-      </div>
-      <div class="term-body" id="term-body">
-        <span class="tcursor"></span>
-      </div>
-    </div>
-  </div>
-</section>
+  <!-- Install Section -->
+  <section id="install" class="py-24">
+    <div class="max-w-5xl mx-auto px-6 text-center">
+      <h2 class="text-4xl font-extrabold text-white mb-16">Choose Your Build</h2>
+      
+      <div class="grid md:grid-cols-2 gap-8 text-left">
+        <!-- Experimental Build (Obsidian) -->
+        <div class="group relative bg-obsidian-surface border border-obsidian-border p-8 rounded-2xl hover:border-white transition-all duration-300">
+          <div class="absolute -inset-0.5 bg-gradient-to-b from-white/20 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity -z-10 blur-md"></div>
+          
+          <div class="flex justify-between items-start mb-6">
+            <div>
+              <h3 class="text-2xl font-bold text-white">Obsidian Build</h3>
+              <p class="text-zinc-400 text-sm mt-2">Latest features, completely rewritten HUD, and brand new UI.</p>
+            </div>
+            <span class="text-xs font-bold font-mono tracking-widest text-amber-400 bg-amber-400/10 px-3 py-1.5 rounded-md border border-amber-400/20">v10.2</span>
+          </div>
+          <div class="bg-black p-5 rounded-xl border border-obsidian-border font-mono text-sm text-zinc-300 break-all mb-6 shadow-inner">
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-obsidian.lua"))()
+          </div>
+          <button onclick="navigator.clipboard.writeText('loadstring(game:HttpGet(\'https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-obsidian.lua\'))()'); this.innerText='Copied to Clipboard!'; setTimeout(()=>this.innerText='Copy Loadstring', 2500)" class="w-full py-4 bg-white text-black font-semibold rounded-xl hover:bg-zinc-200 transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-[0_0_25px_rgba(255,255,255,0.2)]">
+            Copy Loadstring
+          </button>
+        </div>
 
-<section class="rel-sec rev" id="releases">
-  <div class="sw">
-    <div class="sh">
-      <div class="slb">get the script</div>
-      <h2>Releases</h2>
-      <p>Copy the command for your preferred release track and paste it into your executor.</p>
-    </div>
-    <div class="rtabs">
-      <button class="rtab on" onclick="swt('stable',this)"><span id="tsn">v8.2</span><span class="rbg rbs">Stable</span></button>
-      <button class="rtab" onclick="swt('exp',this)"><span id="ten">v8.8</span><span class="rbg rbe">Experimental</span></button>
-    </div>
-    <div id="ps" class="tp on">
-      <div class="cb">
-        <div class="ctop"><div class="wd"><i class="w1"></i><i class="w2"></i><i class="w3"></i></div><span class="cfn" id="fns">kaim-v8.2.lua</span><button class="cpb" onclick="cpy('cs',this)">copy</button></div>
-        <div class="cbod" id="cs"><span class="fn">loadstring</span>(<span class="kw">game</span>:<span class="fn">HttpGet</span>(<span class="st">"https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-v8.2.lua"</span>))()</div>
+        <!-- Stable Build -->
+        <div class="bg-transparent border border-obsidian-border p-8 rounded-2xl hover:border-zinc-500 transition-colors">
+          <div class="flex justify-between items-start mb-6">
+            <div>
+              <h3 class="text-2xl font-bold text-white">Legacy Stable</h3>
+              <p class="text-zinc-500 text-sm mt-2">The classic v8.2 build using the older WindUI library.</p>
+            </div>
+            <span class="text-xs font-bold font-mono tracking-widest text-emerald-400 bg-emerald-400/10 px-3 py-1.5 rounded-md border border-emerald-400/20">v8.2</span>
+          </div>
+          <div class="bg-obsidian-surface p-5 rounded-xl border border-obsidian-border font-mono text-sm text-zinc-500 break-all mb-6">
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-v8.2.lua"))()
+          </div>
+          <button onclick="navigator.clipboard.writeText('loadstring(game:HttpGet(\'https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-v8.2.lua\'))()'); this.innerText='Copied!'; setTimeout(()=>this.innerText='Copy Legacy Code', 2500)" class="w-full py-4 bg-obsidian-surface hover:bg-white/10 border border-obsidian-border rounded-xl text-zinc-300 font-medium transition-colors">
+            Copy Legacy Code
+          </button>
+        </div>
       </div>
     </div>
-    <div id="pe" class="tp">
-      <div class="cb">
-        <div class="ctop"><div class="wd"><i class="w1"></i><i class="w2"></i><i class="w3"></i></div><span class="cfn" id="fne">kaim-v8.8.lua</span><button class="cpb" onclick="cpy('ce',this)">copy</button></div>
-        <div class="cbod" id="ce"><span class="cm">-- experimental: may contain unstable features</span>
-<span class="fn">loadstring</span>(<span class="kw">game</span>:<span class="fn">HttpGet</span>(<span class="st">"https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-v8.8.lua"</span>))()</div>
-      </div>
-    </div>
-  </div>
-</section>
+  </section>
 
-<section class="use-sec rev">
-  <div class="sw">
-    <div class="sh">
-      <div class="slb">how to run</div>
-      <h2>Three steps to activate</h2>
-    </div>
-    <div class="steps-grid">
-      <div class="sc-card">
-        <div class="snum">01</div>
-        <h4>Open your executor</h4>
-        <p>Launch any compatible Lua executor on your PC. Mobile is not supported.</p>
-      </div>
-      <div class="sc-card">
-        <div class="snum">02</div>
-        <h4>Choose a release</h4>
-        <p>Grab the Stable build for reliability or Experimental for the latest features above.</p>
-      </div>
-      <div class="sc-card">
-        <div class="snum">03</div>
-        <h4>Paste &amp; execute</h4>
-        <p>Paste the <code>loadstring</code> into your executor and run. The aimbot activates automatically.</p>
-      </div>
-    </div>
-  </div>
-</section>
+  <footer class="border-t border-obsidian-border mt-auto py-12 text-center bg-black">
+    <p class="text-zinc-600 text-sm font-mono tracking-wide">kaim &copy; 2026. Built with Obsidian UI.</p>
+  </footer>
 
-<section class="tree-sec rev">
-  <div class="sw">
-    <div class="sh">
-      <div class="slb">repository</div>
-      <h2>Project files</h2>
-      <p>Pulled live from GitHub. Updates automatically whenever new files are pushed.</p>
-    </div>
-    <div class="ttbar">
-      <div class="tmeta">sdwird/kaim · <em id="fcount">loading…</em></div>
-      <input class="tsearch" type="text" placeholder="filter files…" id="tsrch" oninput="filterTree(this.value)" autocomplete="off"/>
-    </div>
-    <div class="tbox" id="tbox">
-      <div class="tloading"><div class="tspin"></div>Fetching from GitHub…</div>
-    </div>
-  </div>
-</section>
-
-<section class="notc-sec rev">
-  <div class="sw">
-    <div class="notc">
-      <div class="ni2">⚠️</div>
-      <div>
-        <h4>Config resets after major updates</h4>
-        <p>Frequent changes to the script's memory structure can break old config files after major version bumps. If settings fail to load, delete the old config and create a fresh one.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<footer>
-  <div class="fi">
-    <div class="flogo">kaim</div>
-    <div class="flinks">
-      <a href="https://github.com/sdwird/kaim" target="_blank" rel="noopener">GitHub</a>
-      <a href="https://github.com/sdwird" target="_blank" rel="noopener">sdwird</a>
-      <a href="#releases">Get Script</a>
-      <a href="#" onclick="scrollTo({top:0,behavior:'smooth'});return false">↑ Top</a>
-    </div>
-    <div class="fcopy">sdwird/kaim · Lua aimbot · PC only · live from GitHub</div>
-  </div>
-</footer>
-
-</div><script>
-/* CURSOR */
-const cd=document.getElementById('cd'),cr=document.getElementById('cr');
-let mx=0,my=0,rx=0,ry=0;
-document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
-(function tick(){cd.style.cssText=`left:${mx}px;top:${my}px`;rx+=(mx-rx)*.11;ry+=(my-ry)*.11;cr.style.cssText=`left:${rx}px;top:${ry}px`;requestAnimationFrame(tick)})();
-document.querySelectorAll('a,button,.bc,.sc-card').forEach(el=>{el.addEventListener('mouseenter',()=>document.body.classList.add('ch'));el.addEventListener('mouseleave',()=>document.body.classList.remove('ch'))});
-
-/* NAV */
-window.addEventListener('scroll',()=>document.getElementById('nav').classList.toggle('sc',scrollY>40));
-/* PARTICLES - Grey/White aesthetic */
-(function(){
-  const cv=document.getElementById('pv'),cx=cv.getContext('2d');let W,H,p=[];
-  function r(){W=cv.width=innerWidth;H=cv.height=innerHeight}
-  function mk(){return{x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,r:Math.random()*1.5+.5,a:Math.random()*.3+.05}}
-  function draw(){cx.clearRect(0,0,W,H);for(let i=0;i<p.length;i++){const a=p[i];a.x+=a.vx;a.y+=a.vy;if(a.x<0||a.x>W)a.vx*=-1;if(a.y<0||a.y>H)a.vy*=-1;cx.beginPath();cx.arc(a.x,a.y,a.r,0,Math.PI*2);cx.fillStyle=`rgba(255,255,255,${a.a})`;cx.fill();for(let j=i+1;j<p.length;j++){const b=p[j],dx=a.x-b.x,dy=a.y-b.y,d=dx*dx+dy*dy;if(d<15000){cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.strokeStyle=`rgba(255,255,255,${.05*(1-d/15000)})`;cx.lineWidth=.5;cx.stroke()}}}requestAnimationFrame(draw)}
-  window.addEventListener('resize',r);r();p=Array.from({length:50},mk);draw();
-})();
-
-/* SCROLL REVEAL */
-const ro=new IntersectionObserver(e=>e.forEach(x=>{if(x.isIntersecting)x.target.classList.add('on')}),{threshold:.08});
-document.querySelectorAll('.rev').forEach(s=>ro.observe(s));
-/* COUNT UP */
-function countUp(el,v,d=1100){if(!el||v<=0){if(el)el.textContent=v;return}const s=Date.now();(function f(){const t=Math.min((Date.now()-s)/d,1),e=1-Math.pow(1-t,3);el.textContent=Math.round(e*v);if(t<1)requestAnimationFrame(f)})()}
-
-/* TABS */
-function swt(id,btn){document.querySelectorAll('.tp').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.rtab').forEach(b=>b.classList.remove('on'));document.getElementById('p'+id[0]).classList.add('on');btn.classList.add('on')}
-
-/* COPY */
-function cpy(id,btn){const el=document.getElementById(id);const txt=(el.innerText.split('\n').find(l=>l.trim().startsWith('loadstring'))||el.innerText).trim();navigator.clipboard.writeText(txt).then(()=>{btn.textContent='copied';btn.classList.add('ok');setTimeout(()=>{btn.textContent='copy';btn.classList.remove('ok')},2400)})}
-
-/* TICKER */
-function buildTicker(vers){
-  const extras=['Lua 5.1','PC Only','Roblox','Free & Open','sdwird/kaim','Auto-Updated'];
-  const all=[...vers.map(v=>v.replace('.lua','')),...extras];
-  document.getElementById('tkr').innerHTML=[...all,...all].map(x=>`<span class="tk-item"><span class="tk-dot"></span>${x}</span>`).join('');
-}
-
-/* TERMINAL ANIMATION */
-const termLines=[
-  {p:'$',c:'cmd',t:`loadstring(game:HttpGet("https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-v8.8.lua"))()`},
-  {p:'»',c:'info',t:'Connecting to raw.githubusercontent.com…'},
-  {p:'»',c:'info',t:'Fetching kaim-v8.8.lua…'},
-  {p:'»',c:'info',t:'Script downloaded  (52.4 KB)'},
-  {p:'»',c:'ok',  t:'[kaim v8.8] Initializing…'},
-  {p:'»',c:'ok',  t:'[kaim v8.8] Config loaded'},
-  {p:'»',c:'ok',  t:'[kaim v8.8] Target detection: READY'},
-  {p:'»',c:'ok',  t:'[kaim v8.8] Aimbot: ACTIVE ●'},
-];
-const delays=[0,700,1200,1800,2400,2900,3400,3900];
-let termStarted=false;
-
-const termObs=new IntersectionObserver(entries=>{
-  entries.forEach(e=>{
-    if(e.isIntersecting&&!termStarted){
-      termStarted=true;
-      const body=document.getElementById('term-body');
-      body.innerHTML='';
-      termLines.forEach((l,i)=>{
-        setTimeout(()=>{
-          body.innerHTML=''; // clear cursor
-          const row=document.createElement('div');
-          row.className='tline';
-          row.style.animationDelay='0ms';
-          const cc=l.c==='cmd'?'tcmd':l.c==='ok'?'tok':'tinfo';
-          row.innerHTML=`<span class="tprompt">${l.p}</span><span class="${cc}">${l.t}</span>`;
-          body.appendChild(row);
-          if(i<termLines.length-1){const cur=document.createElement('span');cur.className='tcursor';body.appendChild(cur)}
-        },delays[i]);
-      });
-    }
-  });
-},{threshold:.3});
-const termEl=document.querySelector('.term-sec');
-if(termEl)termObs.observe(termEl);
-
-/* VERSION PARSING */
-function verScore(n){const m=n.match(/kaim-v(\d+)[._]?(\d*)/);if(!m)return 0;return parseInt(m[1])*100+(m[2]?parseInt(m[2]):0)}
-
-/* TREE */
-let allFiles=[];
-function renderTree(files,exp,stab){
-  const box=document.getElementById('tbox');
-  box.innerHTML=`<div class="tdir">kaim/</div>`;
-  files.forEach((f,i)=>{
-    const isE=f===exp,isS=f===stab,isR=f==='README.md';
-    let badge='',cls='tfile';
-    if(isE){badge='<span class="tbg tbl">latest</span>';cls='tmain'}
-    if(isS){badge='<span class="tbg tbs">stable</span>';cls='tmain'}
-    if(isR){badge='<span class="tbg tbr">readme</span>';cls='tmain'}
-    const row=document.createElement('div');
-    row.className='trow';row.setAttribute('data-name',f.toLowerCase());
-    row.style.animationDelay=(i*25)+'ms';
-    row.innerHTML=`<span>├── <span class="${cls}">${f}</span></span>${badge}`;
-    box.appendChild(row);
-  });
-}
-function filterTree(q){document.querySelectorAll('.trow').forEach(r=>{r.style.display=r.getAttribute('data-name').includes(q.toLowerCase())?'':'none'})}
-
-/* GITHUB API */
-const OW='sdwird',RE='kaim',RAW=`https://raw.githubusercontent.com/${OW}/${RE}/refs/heads/main/`;
-const FB=['README.md','kaim-v8.8.lua','kaim-v8.2.lua','kaim-v8.7.lua','kaim-v7.8.lua','kaim-v6.5.lua','kaim-v6.0.lua','kaim-v4.1.lua','kaim-v3.3.lua','kaim-v3.lua','doors.lua','parkour-legacy-bagesp.lua','parkour-reborn-autofarm.lua','rake-remastered.lua','yba-script.lua'];
-
-async function loadGH(){
-  try{const r=await fetch(`https://api.github.com/repos/${OW}/${RE}`);if(r.ok){const d=await r.json();countUp(document.getElementById('ss'),d.stargazers_count||0);countUp(document.getElementById('sf'),d.forks_count||0)}}catch(_){}
-  let files=[];
-  try{const r=await fetch(`https://api.github.com/repos/${OW}/${RE}/git/trees/main?recursive=1`);if(!r.ok)throw 0;const d=await r.json();files=d.tree.filter(f=>f.type==='blob').map(f=>f.path)}catch(_){files=FB}
-  const vers=files.filter(f=>/^kaim-v[\d.]+\.lua$/.test(f)).sort((a,b)=>verScore(b)-verScore(a));
-  const exp=vers[0]||'kaim-v8.8.lua',stab=vers[1]||'kaim-v8.2.lua';
-  document.getElementById('nver').textContent=exp.replace('kaim-','').replace('.lua','');
-  const wv=document.getElementById('wv-ver');if(wv)wv.textContent=exp.replace('.lua','');
-  document.getElementById('tsn').textContent=stab.replace('kaim-','').replace('.lua','');
-  document.getElementById('ten').textContent=exp.replace('kaim-','').replace('.lua','');
-  document.getElementById('fns').textContent=stab;
-  document.getElementById('fne').textContent=exp;
-  document.getElementById('cs').innerHTML=`<span class="fn">loadstring</span>(<span class="kw">game</span>:<span class="fn">HttpGet</span>(<span class="st">"${RAW}${stab}"</span>))()`;
-  document.getElementById('ce').innerHTML=`<span class="cm">-- experimental: may contain unstable features</span>\n<span class="fn">loadstring</span>(<span class="kw">game</span>:<span class="fn">HttpGet</span>(<span class="st">"${RAW}${exp}"</span>))()`;
-  countUp(document.getElementById('sv'),vers.length||9);
-  const sv2=document.getElementById('stripe-vers');if(sv2)sv2.textContent=vers.length||'9+';
-  document.getElementById('fcount').innerHTML=`<em>${files.length}</em> files`;
-  renderTree(files,exp,stab);
-  buildTicker(vers.length?vers:FB.filter(f=>f.startsWith('kaim-v')));
-}
-
-loadGH();
-</script>
 </body>
 </html>
