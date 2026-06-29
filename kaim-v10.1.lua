@@ -55,6 +55,10 @@ local HUD_DARK  = C3(5, 5, 10)
 local BAR_BG    = C3(20, 20, 25)
 local GRAY_NAME = C3(180, 180, 200)
 local GRAY_WEP  = C3(220, 220, 220)
+local HUD_EDGE  = C3(30, 30, 35)
+local HUD_SEP   = C3(40, 40, 50)
+local CYAN_AC   = C3(0, 200, 255)
+local DIM_WHITE = C3(160, 160, 180)
 
 local HP_PAL = {C3(255, 50, 50), C3(255, 130, 0), C3(255, 200, 0), C3(100, 255, 50), C3(0, 255, 100)}
 local D_PAL  = {C3(0, 255, 100), C3(100, 255, 100), C3(255, 210, 0), C3(255, 140, 0), C3(255, 50, 50)}
@@ -109,7 +113,12 @@ local function ND(t)
     }
 
     return setmetatable(proxy, {
-        __index = cache,
+        __index = function(_, k)
+            if cache[k] ~= nil then return cache[k] end
+            local ok, val = pcall(function() return obj[k] end)
+            if ok then return val end
+            return nil
+        end,
         __newindex = function(_, k, v)
             if cache[k] ~= v then
                 cache[k] = v
@@ -135,22 +144,26 @@ local function setRect(rect, sz, pos, c, z, thick, trans, vis)
     elseif not rect.Visible then rect.Visible = true end
 end
 
-local function setText(txt, str, pos, c, sz, z)
-    if txt.Text ~= str then txt.Text = str end
-    if txt.Position ~= pos then txt.Position = pos end
-    if txt.Color ~= c then txt.Color = c end
-    if txt.Size ~= sz then txt.Size = sz end
+local function setText(txt, str, pos, c, sz, z, vis)
+    if str and txt.Text ~= str then txt.Text = str end
+    if pos and txt.Position ~= pos then txt.Position = pos end
+    if c and txt.Color ~= c then txt.Color = c end
+    if sz and txt.Size ~= sz then txt.Size = sz end
     if z and txt.ZIndex ~= z then txt.ZIndex = z end
-    if not txt.Visible then txt.Visible = true end
+    if vis ~= nil then
+        if txt.Visible ~= vis then txt.Visible = vis end
+    elseif not txt.Visible then txt.Visible = true end
 end
 
 local function setCirc(c2, p, r, col, th, trans, vis)
-    if c2.Position ~= p then c2.Position = p end
-    if c2.Radius ~= r then c2.Radius = r end
-    if c2.Color ~= col then c2.Color = col end
+    if p and c2.Position ~= p then c2.Position = p end
+    if r and c2.Radius ~= r then c2.Radius = r end
+    if col and c2.Color ~= col then c2.Color = col end
     if th and c2.Thickness ~= th then c2.Thickness = th end
     if trans and c2.Transparency ~= trans then c2.Transparency = trans end
-    if c2.Visible ~= vis then c2.Visible = vis end
+    if vis ~= nil then
+        if c2.Visible ~= vis then c2.Visible = vis end
+    elseif not c2.Visible then c2.Visible = true end
 end
 
 -- ==============================================================================
@@ -182,7 +195,7 @@ local S = {
     Mov = {
         SpeedOn=false, Speed=16, JumpOn=false, Jump=50, InfJump=false, BHop=false,
         Spinbot=false, SpinSpeed=20, FOVOn=false, CamFOV=70, Noclip=false, NoclipKey="N",
-        GravOn=false, Gravity=196.2, BlinkKey="None"
+        GravOn=false, Gravity=196.2, BlinkOn=false, BlinkKey="None"
     },
     Perf = { LOD=500, Watermark=true },
     Cfg = { GameProfile=false }
@@ -204,6 +217,7 @@ local Conns, PList, TC, ESPObj, CC, HBOrig = {}, {}, {}, {}, {}, {}
 local chaosT, CHAOS_INT, chaosName = 0, 0.22, "Head"
 local tbT, RSF, STAG, avgDT = 0, 0, 3, 0.016
 local thHP, thAlpha, thName, thData, hudVis = 100, 0, "", "", false
+local _espBudgetIdx = 0  -- Frame budgeting index for ESP
 local PI4, _camTan, _lastCamFOV = 0.7853981634, 0.57, 0
 
 -- FIX: Properly declare OrigLit as local (was leaking to global)
@@ -218,11 +232,43 @@ local FOVR = ND("Circle"); FOVR.Thickness = 1.5; FOVR.Filled = false
 local FOVF = ND("Circle"); FOVF.Thickness = 1;   FOVF.Filled = true
 local LTracer = ND("Line"); LTracer.Thickness = 1.5
 
-local THUD = { BG=ND("Square"), Out=ND("Square"), Ac=ND("Square"), N=ND("Text"), BBG=ND("Square"), BFG=ND("Square"), HPNum=ND("Text") }
-THUD.BG.Filled=true; THUD.BG.Color=HUD_BG; THUD.Out.Filled=false; THUD.Ac.Filled=true
-THUD.N.Outline=true; THUD.N.Color=WHITE; THUD.N.Font=2; THUD.N.Center=true
-THUD.BBG.Filled=true; THUD.BBG.Color=BAR_BG; THUD.BFG.Filled=true
-THUD.HPNum.Outline=true; THUD.HPNum.Color=WHITE; THUD.HPNum.Font=2; THUD.HPNum.Center=true; THUD.HPNum.ZIndex=15
+local THUD = {
+    -- Background layers
+    Shadow = ND("Square"),   -- Soft outer shadow
+    BG     = ND("Square"),   -- Main background
+    HeadBG = ND("Square"),   -- Header background (slightly lighter)
+    Out    = ND("Square"),   -- Outer 1px border
+    InGlow = ND("Square"),   -- Inner top edge glow line
+    Ac     = ND("Square"),   -- Top accent color bar
+    AcGlow = ND("Square"),   -- Accent glow beneath
+    -- Text elements
+    Pulse  = ND("Circle"),   -- Live tracking pulsing dot
+    N      = ND("Text"),     -- Name + distance
+    Mode   = ND("Text"),     -- Aim mode badge
+    Sep    = ND("Square"),   -- Separator line
+    -- Health bar
+    BBG    = ND("Square"),   -- Bar background
+    BFG    = ND("Square"),   -- Bar foreground (fill)
+    HPNum  = ND("Text"),     -- HP number text
+    HPPct  = ND("Text"),     -- HP percentage
+}
+
+-- Configure all THUD drawing objects
+THUD.Shadow.Filled=true; THUD.Shadow.Color=BLACK; THUD.Shadow.ZIndex=8
+THUD.BG.Filled=true; THUD.BG.Color=HUD_BG; THUD.BG.ZIndex=9
+THUD.HeadBG.Filled=true; THUD.HeadBG.Color=C3(16, 16, 18); THUD.HeadBG.ZIndex=9
+THUD.Out.Filled=false; THUD.Out.Color=HUD_EDGE; THUD.Out.Thickness=1; THUD.Out.ZIndex=10
+THUD.InGlow.Filled=true; THUD.InGlow.Color=HUD_SEP; THUD.InGlow.ZIndex=10
+THUD.Ac.Filled=true; THUD.Ac.ZIndex=11
+THUD.AcGlow.Filled=true; THUD.AcGlow.ZIndex=10
+THUD.Pulse.Filled=true; THUD.Pulse.ZIndex=12
+THUD.N.Outline=true; THUD.N.Color=WHITE; THUD.N.Font=2; THUD.N.Center=false; THUD.N.ZIndex=12
+THUD.Mode.Outline=true; THUD.Mode.Color=DIM_WHITE; THUD.Mode.Font=2; THUD.Mode.Center=false; THUD.Mode.ZIndex=12
+THUD.Sep.Filled=true; THUD.Sep.Color=HUD_SEP; THUD.Sep.ZIndex=10
+THUD.BBG.Filled=true; THUD.BBG.Color=BAR_BG; THUD.BBG.ZIndex=10
+THUD.BFG.Filled=true; THUD.BFG.ZIndex=11
+THUD.HPNum.Outline=true; THUD.HPNum.Color=WHITE; THUD.HPNum.Font=2; THUD.HPNum.Center=false; THUD.HPNum.ZIndex=12
+THUD.HPPct.Outline=true; THUD.HPPct.Color=DIM_WHITE; THUD.HPPct.Font=2; THUD.HPPct.Center=false; THUD.HPPct.ZIndex=12
 
 local function CacheL() OrigLit = {T=Lit.ClockTime, B=Lit.Brightness, S=Lit.GlobalShadows, A=Lit.Ambient} end; CacheL()
 
@@ -233,6 +279,7 @@ local function CacheL() OrigLit = {T=Lit.ClockTime, B=Lit.Brightness, S=Lit.Glob
 -- Triggerbot raycast ignores: LocalPlayer's character only
 local visRayFilter = {}
 local tbRayFilter = {}
+local _lastVisChar = nil
 
 local function UpdateTBRayFilter()
     table.clear(tbRayFilter)
@@ -243,6 +290,8 @@ local function UpdateTBRayFilter()
 end
 
 local function SetVisFilter(targetChar)
+    if _lastVisChar == targetChar then return end
+    _lastVisChar = targetChar
     -- Per-target: ignore local character + target character only (2 items max)
     table.clear(visRayFilter)
     if LP.Character then tIns(visRayFilter, LP.Character) end
@@ -250,7 +299,10 @@ local function SetVisFilter(targetChar)
     RP.FilterDescendantsInstances = visRayFilter
 end
 
-tIns(Conns, LP.CharacterAdded:Connect(function() task.delay(0.5, UpdateTBRayFilter) end))
+tIns(Conns, LP.CharacterAdded:Connect(function() 
+    task.delay(0.5, UpdateTBRayFilter)
+    _lastVisChar = nil -- Invalidate filter on LP respawn
+end))
 
 -- ==============================================================================
 --  6. CORE UTILITIES
@@ -294,8 +346,6 @@ end
 
 local function IsVis(part, camP, targetChar)
     if not part then return false end
-    local pOk, inWs = pcall(function() return part:IsDescendantOf(workspace) end)
-    if not pOk or not inWs then return false end
     SetVisFilter(targetChar)
     return workspace:Raycast(camP, part.Position - camP, RP) == nil
 end
@@ -364,7 +414,7 @@ local function GetTarget(camP, fovP, cam)
         local pl = PList[i]; local cd = CC[pl]
         if not cd or not cd.Hum or cd.Hum.Health <= 0 then continue end
         if S.Aim.TeamCheck and IsTeam(pl) then continue end
-        if not cd._onSc then continue end
+        if not cd._onSc or not cd._wsValid then continue end
 
         if S.Aim.ESPTargetsOnly then
             local e = ESPObj[pl]
@@ -522,9 +572,9 @@ end
 
 local function HideTHUD()
     if not hudVis then return end
-    THUD.BG.Visible=false; THUD.Out.Visible=false; THUD.Ac.Visible=false
-    THUD.N.Visible=false; THUD.BBG.Visible=false; THUD.BFG.Visible=false
-    THUD.HPNum.Visible=false
+    for _, obj in pairs(THUD) do
+        if obj.Visible then obj.Visible = false end
+    end
     hudVis = false
 end
 
@@ -614,37 +664,158 @@ local function TickAim(camP, sw, sh, dt, fovP, cam)
                     _liveTargetDist = ("%dm"):format(mFloor(distToTarget))
 
                     if S.ESP.HUD then
-                        showHUD = true; local sc = S.ESP.HUDScale; local st = S.ESP.HUDStyle; local ac = lockVis and WHITE or RED
-                        local aHP = cd.Hum.Health or 0; thHP = thHP + (aHP - thHP)*(dt*10); if thHP ~= thHP or thHP < 0 then thHP = 0 end
+                        showHUD = true
+                        local sc = S.ESP.HUDScale
+                        local st = S.ESP.HUDStyle
+                        local ac = lockVis and CYAN_AC or RED
+
+                        -- Smooth HP lerp with NaN guard
+                        local aHP = cd.Hum.Health or 0
+                        thHP = thHP + (aHP - thHP) * mClamp(dt * 12, 0, 1)
+                        if thHP ~= thHP or thHP < 0 then thHP = 0 end
                         local maxHP = mMax(1, cd._maxHP or 100)
                         local hpPct = mClamp(thHP / maxHP, 0, 1)
-                        local di = mFloor(distToTarget); local rN = sUp(tar.DisplayName)
+                        local di = mFloor(distToTarget)
+                        local rN = sUp(tar.DisplayName)
 
-                        local fullStr = ("%s  [%dm]"):format(rN, di)
-                        if S.Aim.Mode == "Chaos" then fullStr = fullStr .. " - " .. chaosName end
-                        if thName ~= fullStr then thName = fullStr end
+                        -- Build display strings
+                        local nameStr = rN
+                        local distStr = di .. "m"
+                        local modeStr = sUp(S.Aim.Mode)
+                        if S.Aim.Mode == "Chaos" then modeStr = modeStr .. ": " .. chaosName end
                         local hpStr = ("%d / %d"):format(mFloor(aHP), mFloor(maxHP))
+                        local pctStr = mFloor(hpPct * 100) .. "%"
 
-                        thAlpha = mClamp(thAlpha + dt*10, 0, 1); local ea = 1 - mExp(-thAlpha * 6); local ys = (1 - ea) * 20
+                        -- Weapon detection (cached per-frame in the cd table)
+                        local wepStr = "NONE"
+                        pcall(function()
+                            local tool = cd.Char:FindFirstChildOfClass("Tool")
+                            if tool then wepStr = sUp(tool.Name) end
+                        end)
 
-                        local bw = mFloor(mMax(220, 40 + #thName * 8) * sc)
-                        local bh = mFloor(46 * sc)
-                        local hx = mFloor((sw - bw) * 0.5)
-                        local hy = st == "Top Premium" and (mFloor(sh * 0.06) - mFloor(ys)) or (mFloor(sh * 0.82) + mFloor(ys))
+                        -- Smooth fade-in animation
+                        thAlpha = mClamp(thAlpha + dt * 8, 0, 1)
+                        local ea = 1 - (1 - thAlpha) ^ 3  -- Cubic ease-out
+                        local ys = (1 - ea) * 30
 
-                        setRect(THUD.BG, V2(bw,bh), V2(hx,hy), C3(15, 15, 15), nil, nil, 0.85*ea, true)
-                        setRect(THUD.Out, V2(bw+2,bh+2), V2(hx-1,hy-1), BLACK, nil, nil, ea, true)
-                        setRect(THUD.Ac, V2(bw, 2), V2(hx,hy), ac, nil, nil, ea, true)
-                        setText(THUD.N, thName, V2(hx+(bw*0.5), hy+mFloor(8*sc)), WHITE, mMax(12,mFloor(14*sc)), nil); THUD.N.Transparency=ea
+                        -- Layout calculations
+                        local pad = mFloor(12 * sc)
+                        local nameSz = mMax(14, mFloor(16 * sc))
+                        local subSz = mMax(11, mFloor(12 * sc))
+                        local acH = mMax(2, mFloor(3 * sc))  -- Accent bar height
+                        local barH = mMax(6, mFloor(8 * sc))  -- Health bar height
+                        local pulseR = mMax(1, mFloor(2 * sc)) + math.sin(tick() * 6) * 1.5
+                        local hpCol = HPC(hpPct)
+                        local modeDistStr = modeStr .. "  " .. distStr
+                        local bw, bh, hx, hy
 
-                        local barThick = mMax(8, mFloor(10*sc))
-                        local barY = hy + mFloor(28*sc)
-                        local barW = bw - mFloor(20*sc)
-                        local barX = hx + mFloor(10*sc)
+                        if st == "Minimalist" then
+                            bw = mFloor(mMax(200, (#nameStr + #hpStr + 6)*8) * sc)
+                            bh = pad + nameSz + barH + pad
+                            hx = mFloor((sw - bw) * 0.5)
+                            hy = mFloor(sh * 0.75) + mFloor(ys)
 
-                        setRect(THUD.BBG, V2(barW,barThick), V2(barX,barY), BLACK, nil, nil, 0.6*ea, true)
-                        setRect(THUD.BFG, V2(mFloor(barW*hpPct),barThick), V2(barX,barY), HPC(hpPct), nil, nil, ea, true)
-                        setText(THUD.HPNum, hpStr, V2(hx+(bw*0.5), barY - mFloor(2*sc)), WHITE, mMax(10, mFloor(11*sc)), nil); THUD.HPNum.Transparency=ea
+                            local textY = hy
+                            setCirc(THUD.Pulse, V2(hx + 4, textY + nameSz * 0.5), pulseR, ac, nil, ea, true)
+                            setText(THUD.N, nameStr, V2(hx + 14, textY), WHITE, nameSz, 12)
+                            setText(THUD.Mode, modeDistStr, V2(hx + bw - #modeDistStr * (subSz * 0.48), textY + 2), DIM_WHITE, subSz, 12)
+                            
+                            local barY = textY + nameSz + 4
+                            local fillW = mMax(1, mFloor(bw * hpPct))
+                            setRect(THUD.BBG, V2(bw, barH), V2(hx, barY), BAR_BG, 10, nil, 0.7*ea, true)
+                            setRect(THUD.BFG, V2(fillW, barH), V2(hx, barY), hpCol, 11, nil, ea, true)
+
+                            -- Hide backgrounds
+                            setRect(THUD.Shadow, V2(), V2(), nil, nil, nil, 0, false)
+                            setRect(THUD.BG, V2(), V2(), nil, nil, nil, 0, false)
+                            setRect(THUD.HeadBG, V2(), V2(), nil, nil, nil, 0, false)
+                            setRect(THUD.Out, V2(), V2(), nil, nil, nil, 0, false)
+                            setRect(THUD.Ac, V2(), V2(), nil, nil, nil, 0, false)
+                            setRect(THUD.AcGlow, V2(), V2(), nil, nil, nil, 0, false)
+                            setRect(THUD.InGlow, V2(), V2(), nil, nil, nil, 0, false)
+                            setRect(THUD.Sep, V2(), V2(), nil, nil, nil, 0, false)
+                            setText(THUD.HPNum, nil, nil, nil, nil, nil, false)
+                            setText(THUD.HPPct, nil, nil, nil, nil, nil, false)
+
+                            THUD.N.Transparency = ea; THUD.Pulse.Transparency = ea; THUD.Mode.Transparency = ea*0.8
+                            
+                        elseif st == "Compact" then
+                            bw = mFloor(mMax(360, 100) * sc)
+                            bh = mFloor(acH + 24 * sc)
+                            hx = mFloor((sw - bw) * 0.5)
+                            hy = mFloor(sh * 0.05) - mFloor(ys)
+                            
+                            setRect(THUD.Shadow, V2(bw+6, bh+6), V2(hx-3, hy-3), BLACK, 8, nil, 0.3*ea, true)
+                            setRect(THUD.BG, V2(bw, bh), V2(hx, hy), HUD_BG, 9, nil, 0.9*ea, true)
+                            setRect(THUD.Ac, V2(bw, acH), V2(hx, hy), ac, 11, nil, ea, true)
+                            setRect(THUD.Out, V2(bw, bh), V2(hx, hy), HUD_EDGE, 10, 1, 0.6*ea, true)
+
+                            local midY = hy + acH + mFloor((bh - acH)*0.5 - nameSz*0.5)
+                            setCirc(THUD.Pulse, V2(hx + pad + 4, midY + nameSz * 0.5), pulseR, ac, nil, ea, true)
+                            setText(THUD.N, nameStr, V2(hx + pad + 14, midY), WHITE, nameSz, 12)
+                            
+                            local barW = mFloor(bw * 0.4)
+                            local barX = hx + mFloor(bw * 0.5 - barW * 0.5)
+                            local fillW = mMax(1, mFloor(barW * hpPct))
+                            local bY = hy + acH + mFloor((bh - acH)*0.5 - barH*0.5)
+                            
+                            setRect(THUD.BBG, V2(barW, barH), V2(barX, bY), BAR_BG, 10, nil, 0.7*ea, true)
+                            setRect(THUD.BFG, V2(fillW, barH), V2(barX, bY), hpCol, 11, nil, ea, true)
+                            
+                            setText(THUD.HPNum, pctStr, V2(barX + barW + 8, midY + 1), hpCol, subSz, 12)
+                            setText(THUD.Mode, modeDistStr, V2(hx + bw - pad - #modeDistStr * (subSz * 0.48), midY + 1), DIM_WHITE, subSz, 12)
+                            
+                            -- Hide unused
+                            setRect(THUD.HeadBG, V2(), V2(), nil, nil, nil, 0, false)
+                            setRect(THUD.AcGlow, V2(), V2(), nil, nil, nil, 0, false)
+                            setRect(THUD.InGlow, V2(), V2(), nil, nil, nil, 0, false)
+                            setRect(THUD.Sep, V2(), V2(), nil, nil, nil, 0, false)
+                            setText(THUD.HPPct, nil, nil, nil, nil, nil, false)
+
+                            THUD.Shadow.Transparency=0.3*ea; THUD.BG.Transparency=0.9*ea; THUD.Out.Transparency=0.6*ea; THUD.Ac.Transparency=ea
+                            THUD.Pulse.Transparency=ea; THUD.N.Transparency=ea; THUD.HPNum.Transparency=ea; THUD.Mode.Transparency=ea*0.8
+
+                        else
+                            -- Premium or Competitive
+                            bw = mFloor(mMax(280, 60 + mMax(#nameStr, #modeDistStr + 6) * 8) * sc)
+                            bh = mFloor((acH + pad + nameSz + 6 + 1 + 6 + barH + 4 + subSz + pad) * 1)
+                            hx = mFloor((sw - bw) * 0.5)
+                            if st == "Premium" then hy = mFloor(sh * 0.05) - mFloor(ys) else hy = mFloor(sh * 0.82) + mFloor(ys) end
+                            
+                            setRect(THUD.Shadow, V2(bw+6, bh+6), V2(hx-3, hy-3), BLACK, 8, nil, 0.3*ea, true)
+                            setRect(THUD.BG, V2(bw, bh), V2(hx, hy), HUD_BG, 9, nil, 0.9*ea, true)
+                            setRect(THUD.HeadBG, V2(bw, acH + pad + nameSz + 6), V2(hx, hy), HUD_DARK, 9, nil, 0.9*ea, true)
+                            setRect(THUD.Out, V2(bw, bh), V2(hx, hy), HUD_EDGE, 10, 1, 0.6*ea, true)
+                            setRect(THUD.Ac, V2(bw, acH), V2(hx, hy), ac, 11, nil, ea, true)
+                            setRect(THUD.AcGlow, V2(bw, mFloor(6*sc)), V2(hx, hy+acH), ac, 10, nil, 0.15*ea, true)
+                            setRect(THUD.InGlow, V2(bw-2, 1), V2(hx+1, hy+acH), HUD_SEP, 10, nil, 0.4*ea, true)
+
+                            local textY = hy + acH + pad
+                            setCirc(THUD.Pulse, V2(hx + pad + 4, textY + nameSz * 0.5), pulseR, ac, nil, ea, true)
+                            setText(THUD.N, nameStr, V2(hx + pad + 14, textY), WHITE, nameSz, 12)
+                            setText(THUD.Mode, modeDistStr, V2(hx + bw - pad - #modeDistStr * (subSz * 0.48), textY + 2), DIM_WHITE, subSz, 12)
+
+                            local sepY = textY + nameSz + 6
+                            setRect(THUD.Sep, V2(bw - pad*2, 1), V2(hx + pad, sepY), HUD_SEP, 10, nil, 0.5*ea, true)
+
+                            local barY = sepY + 6
+                            local barW2 = bw - pad * 2
+                            local barX = hx + pad
+                            local fillW = mMax(1, mFloor(barW2 * hpPct))
+
+                            setRect(THUD.BBG, V2(barW2, barH), V2(barX, barY), BAR_BG, 10, nil, 0.7*ea, true)
+                            setRect(THUD.BFG, V2(fillW, barH), V2(barX, barY), hpCol, 11, nil, ea, true)
+
+                            local hpTxtY = barY + barH + 4
+                            setText(THUD.HPNum, hpStr, V2(barX, hpTxtY), hpCol, subSz, 12)
+                            setText(THUD.HPPct, pctStr, V2(barX + barW2 - #pctStr * (subSz * 0.48), hpTxtY), hpCol, subSz, 12)
+
+                            THUD.Shadow.Transparency = 0.3*ea; THUD.BG.Transparency = 0.9*ea; THUD.HeadBG.Transparency = 0.9*ea
+                            THUD.Out.Transparency = 0.6*ea; THUD.Ac.Transparency = ea; THUD.AcGlow.Transparency = 0.15*ea
+                            THUD.InGlow.Transparency = 0.4*ea; THUD.Pulse.Transparency = ea; THUD.N.Transparency = ea
+                            THUD.Mode.Transparency = ea*0.8; THUD.Sep.Transparency = 0.5*ea; THUD.BBG.Transparency = 0.7*ea
+                            THUD.BFG.Transparency = ea; THUD.HPNum.Transparency = ea; THUD.HPPct.Transparency = ea*0.7
+                        end
 
                         hudVis = true
                     end
@@ -657,11 +828,17 @@ local function TickAim(camP, sw, sh, dt, fovP, cam)
 
     if not S.Aim.Target or not S.Aim.IsAiming then if LTracer.Visible then LTracer.Visible = false end end
     if not showHUD then
-        thAlpha = mClamp(thAlpha - dt*8, 0, 1)
-        if thAlpha <= 0.05 then HideTHUD() else
-            local ea = 1 - mExp(-thAlpha * 6)
-            THUD.BG.Transparency = 0.85*ea; THUD.Out.Transparency = ea; THUD.Ac.Transparency = ea
-            THUD.N.Transparency = ea; THUD.BBG.Transparency = 0.6*ea; THUD.BFG.Transparency = ea; THUD.HPNum.Transparency = ea
+        thAlpha = mClamp(thAlpha - dt * 6, 0, 1)
+        if thAlpha <= 0.02 then HideTHUD() else
+            local ea = 1 - (1 - thAlpha) ^ 3
+            -- Fade all THUD elements proportionally
+            THUD.Shadow.Transparency = 0.3*ea
+            THUD.BG.Transparency = 0.9*ea; THUD.HeadBG.Transparency = 0.9*ea; THUD.Out.Transparency = 0.6*ea
+            THUD.Ac.Transparency = ea; THUD.AcGlow.Transparency = 0.15*ea; THUD.InGlow.Transparency = 0.4*ea
+            THUD.Pulse.Transparency = ea
+            THUD.N.Transparency = ea; THUD.Mode.Transparency = ea*0.8; THUD.Sep.Transparency = 0.5*ea
+            THUD.BBG.Transparency = 0.7*ea; THUD.BFG.Transparency = ea
+            THUD.HPNum.Transparency = ea; THUD.HPPct.Transparency = ea*0.7
         end
     end
 end
@@ -671,6 +848,8 @@ local function TickESP(camP, sw, sh, cam, tStart, dt)
     if cfov ~= _lastCamFOV then _lastCamFOV = cfov; _camTan = math.tan(math.rad(cfov*0.5)) end
 
     local halfH = sh * 0.5
+    local pCount = #PList
+    if pCount == 0 then return end
 
     -- Rule 4: Hoisted variables — zero table lookups in the loop
     local esp = S.ESP
@@ -686,38 +865,40 @@ local function TickESP(camP, sw, sh, cam, tStart, dt)
     local esCustomN = esp.CustomName; local esNameCol = esp.NameCol
     local esTracerCol = esp.TracerCol; local esMaxDist = esp.MaxDist
 
-    for i = 1, #PList do
+    -- Frame budget: process all players for boxes/text, but stagger expensive ops
+    -- Visibility raycasts are already staggered by _stag; tool lookup is now cached
+    local rsf_mod_stag = RSF % STAG
+
+    for i = 1, pCount do
         local pl = PList[i]; local e = ESPObj[pl]; if not e then continue end
         local cd = CC[pl]
 
-        -- Safety: pcall-guard HRP access
-        if not cd or not cd.HRP or not cd.Hum or cd.Hum.Health <= 0 then HideE(e); continue end
-        local hrpOk, hrpInWs = pcall(function() return cd.HRP:IsDescendantOf(workspace) end)
-        if not hrpOk or not hrpInWs then HideE(e); continue end
+        -- Fast rejection cascade (cheapest checks first)
+        if not cd or not cd._wsValid then HideE(e); continue end
+        local hrp = cd.HRP; local hum = cd.Hum
+        if not hrp or not hum or hum.Health <= 0 then HideE(e); continue end
 
         local isTM = IsTeam(pl)
         if esTeamChk and isTM and not esShowTeam then HideE(e); continue end
 
         local d2 = cd._distSq; if d2 > _maxD2 then HideE(e); continue end
-        local onSc, depth = cd._onSc, cd._depth
+        local onSc = cd._onSc; local depth = cd._depth
         if depth <= 0 then HideE(e); continue end
         local isLOD = d2 > _lodD2
 
-        -- Smooth Health Lerp: exponential decay for butter-smooth bars
-        local targetHP = cd.Hum.Health
+        -- Smooth Health Lerp: exponential decay for smooth bars, instant heal
+        local targetHP = hum.Health
         local hpDiff = targetHP - e._smoothHp
         if hpDiff < 0 then
-            -- Damage: fast drop
             e._smoothHp = e._smoothHp + hpDiff * mClamp(esHBSm * dt, 0, 1)
         else
-            -- Heal: instant recovery
             e._smoothHp = targetHP
         end
         local hpPct = mClamp(e._smoothHp / mMax(1, cd._maxHP or 100), 0, 1)
 
-        -- Staggered visibility raycast (skip LOD players)
+        -- Staggered visibility raycast (LOD players skip raycasts entirely)
         if not isLOD and onSc and esVisCol then
-            if e._stag == (RSF % STAG) then e.vis = IsVis(cd.HRP, camP, cd.Char) end
+            if e._stag == rsf_mod_stag then e.vis = IsVis(hrp, camP, cd.Char) end
         else e.vis = true end
 
         local col = (isTM and esShowTeam) and esTeamCol or (esVisCol and (e.vis and esVisC or esHideC) or esStatC)
@@ -740,7 +921,8 @@ local function TickESP(camP, sw, sh, cam, tStart, dt)
         depth = mMax(depth, 0.1)
         local pps = halfH / (depth * _camTan)
         local bw, bh = mFloor(mMax(2, cd._charW * 2 * pps)), mFloor(mMax(4, cd._charH * 2 * pps))
-        local bx, by = mFloor(cd._sp.X - bw * 0.5), mFloor(cd._sp.Y - bh * 0.5)
+        local cx = mFloor(cd._sp.X)  -- Pre-compute once (used 3+ times)
+        local bx, by = cx - mFloor(bw * 0.5), mFloor(cd._sp.Y - bh * 0.5)
         local zIndex = mFloor(10000 - depth)
 
         if esBoxes then
@@ -788,19 +970,26 @@ local function TickESP(camP, sw, sh, cam, tStart, dt)
 
         if esNames then
             local dn = pl.DisplayName; if e._ns ~= dn then e._ns = dn; e._nsFmt = Fmt(dn, esTC) end
-            setText(e.N, e._nsFmt, V2(mFloor(cd._sp.X), ty), nCol, esTSz, zIndex + 5)
+            setText(e.N, e._nsFmt, V2(cx, ty), nCol, esTSz, zIndex + 5)
         else if e.N.Visible then e.N.Visible = false end end
 
         if esDist then
             local di = mFloor(mSqrt(d2)); if e._di ~= di then e._di = di; e._diFmt = Fmt(di.."m", esTC) end
-            setText(e.Di, e._diFmt, V2(mFloor(cd._sp.X), by2), DC5(di, esMaxDist), subTS, zIndex + 5)
+            setText(e.Di, e._diFmt, V2(cx, by2), DC5(di, esMaxDist), subTS, zIndex + 5)
             by2 = by2 + subTS + 2
         else if e.Di.Visible then e.Di.Visible = false end end
 
+        -- Weapon text: cached tool lookup — only re-query every STAG frames
         if esWep and not isLOD then
-            local tool = cd.Char:FindFirstChildOfClass("Tool"); local ws = tool and tool.Name or "None"
-            if e._ws ~= ws then e._ws = ws; e._wsFmt = Fmt(ws, esTC); e._wCol = GetWepCol(ws) end
-            setText(e.W, e._wsFmt, V2(mFloor(cd._sp.X), by2), e._wCol, subTS, zIndex + 5)
+            if e._stag == rsf_mod_stag or e._ws == "\0" then
+                local ws = "None"
+                pcall(function()
+                    local tool = cd.Char:FindFirstChildOfClass("Tool")
+                    if tool then ws = tool.Name end
+                end)
+                if e._ws ~= ws then e._ws = ws; e._wsFmt = Fmt(ws, esTC); e._wCol = GetWepCol(ws) end
+            end
+            setText(e.W, e._wsFmt, V2(cx, by2), e._wCol, subTS, zIndex + 5)
         else if e.W.Visible then e.W.Visible = false end end
     end
 end
@@ -808,6 +997,7 @@ end
 -- ==============================================================================
 --  10. HEARTBEAT LOOP (Physics, Triggerbot, Hitbox, World)
 -- ==============================================================================
+local _hbActive = false
 local function TickHB(dt)
     -- Camera FOV override
     if S.Mov.FOVOn then
@@ -848,13 +1038,14 @@ local function TickHB(dt)
 
     -- Hitbox Expander (FIX: was missing entirely)
     if S.HB.On then
+        _hbActive = true
         local newSz = V3(S.HB.Size, S.HB.Size, S.HB.Size)
         local newTr = S.HB.Trans
         for ii = 1, #PList do
             local pl = PList[ii]
             if S.Aim.TeamCheck and IsTeam(pl) then continue end
             local cd = CC[pl]
-            if cd and cd.Hum and cd.Hum.Health > 0 then
+            if cd and cd.Hum and cd.Hum.Health > 0 and cd._wsValid then
                 local part = S.HB.Part == "Head" and cd.Head or (S.HB.Part == "HumanoidRootPart" and cd.HRP or cd.Char:FindFirstChild(S.HB.Part))
                 if part and part:IsA("BasePart") then
                     if not HBOrig[pl] then HBOrig[pl] = {} end
@@ -865,7 +1056,7 @@ local function TickHB(dt)
                 end
             end
         end
-    else
+    elseif _hbActive then
         for pl, parts in pairs(HBOrig) do
             for part, d in pairs(parts) do
                 if part and part.Parent then
@@ -874,6 +1065,7 @@ local function TickHB(dt)
             end
         end
         if next(HBOrig) then table.clear(HBOrig) end
+        _hbActive = false
     end
 
     -- Triggerbot (FIX: was missing entirely)
@@ -932,17 +1124,25 @@ local function TickRender(dt)
     local cp = cam.CFrame.Position; local sw, sh = vp.X, vp.Y
     local myC = CC[LP]; local myP = (myC and myC.HRP) and myC.HRP.Position or cp
 
-    -- Pre-compute all player screen positions (shared data for aim + ESP)
+    -- Pre-compute all player screen positions + reset validation flags
     for i=1, #PList do
         local pl = PList[i]; local cd = CC[pl]
         if cd and cd.HRP and cd.Hum and cd.Hum.Health > 0 then
-            local hp = cd.HRP.Position
-            local sp, on = cam:WorldToViewportPoint(hp)
-            cd._sp = sp; cd._onSc = on; cd._depth = sp.Z
-            local dx, dy, dz = hp.X - myP.X, hp.Y - myP.Y, hp.Z - myP.Z
-            cd._distSq = dx*dx + dy*dy + dz*dz
+            -- Only pcall once per frame, globally!
+            local hrpOk, inWs = pcall(cd.HRP.IsDescendantOf, cd.HRP, workspace)
+            if hrpOk and inWs then
+                cd._wsValid = true
+                local hp = cd.HRP.Position
+                local sp, on = cam:WorldToViewportPoint(hp)
+                cd._sp = sp; cd._onSc = on; cd._depth = sp.Z
+                local dx, dy, dz = hp.X - myP.X, hp.Y - myP.Y, hp.Z - myP.Z
+                cd._distSq = dx*dx + dy*dy + dz*dz
+            else
+                cd._wsValid = false
+                cd._onSc = false; cd._depth = 0
+            end
         else
-            if cd then cd._onSc = false; cd._depth = 0 end
+            if cd then cd._wsValid = false; cd._onSc = false; cd._depth = 0 end
         end
     end
 
@@ -1134,7 +1334,7 @@ ERSettings:AddSlider("ESPTSz",   {Text="Text Size", Default=14, Min=10, Max=22, 
 local HLBox = T.Visual:AddRightGroupbox("Target HUD")
 local HUDToggle = HLBox:AddToggle("ESPHUD", {Text="Enable Target HUD", Default=true, Callback=function(v) S.ESP.HUD=v end})
 local HUDSettings = HLBox:AddDependencyBox(); HUDSettings:SetupDependencies({{HUDToggle, true}})
-HUDSettings:AddDropdown("HUDStyle", {Text="HUD Style", Values={"Top Premium","Bottom Competitive"}, Default="Top Premium", Callback=function(v) S.ESP.HUDStyle=v end})
+HUDSettings:AddDropdown("HUDStyle", {Text="HUD Style", Values={"Premium","Competitive","Minimalist","Compact"}, Default="Premium", Callback=function(v) S.ESP.HUDStyle=v end})
 HUDSettings:AddSlider("HUDScale", {Text="HUD Scale", Default=1.0, Min=0.5, Max=2.0, Rounding=2, Callback=function(v) S.ESP.HUDScale=v end})
 
 -- ---------- Movement Tab ----------
@@ -1181,7 +1381,9 @@ local SpinToggle = MR:AddToggle("MovSpinOn", {Text="Spinbot (Anti-Aim)", Default
 local SpinSettings = MR:AddDependencyBox(); SpinSettings:SetupDependencies({{SpinToggle, true}})
 SpinSettings:AddSlider("MovSpinSpd", {Text="Spin Speed", Default=20, Min=1, Max=100, Rounding=0, Callback=function(v) S.Mov.SpinSpeed=v end})
 
-MR:AddLabel("Blink to Target"):AddKeyPicker("BlinkKey", {Default="None", Text="Blink", Tooltip="Teleport 4 studs behind your locked target.", Callback=function(v) S.Mov.BlinkKey=v; pcall(function() _blinkKC=Enum.KeyCode[v] end) end})
+local BlinkTog = MR:AddToggle("BlinkOn", {Text="Enable Blink to Target", Default=false, Callback=function(v) S.Mov.BlinkOn=v end})
+local BlinkSett = MR:AddDependencyBox(); BlinkSett:SetupDependencies({{BlinkTog, true}})
+BlinkSett:AddLabel("Blink Key"):AddKeyPicker("BlinkKey", {Default="None", Text="Blink Key", Tooltip="Teleport 4 studs behind your locked target.", Callback=function(v) S.Mov.BlinkKey=v; pcall(function() _blinkKC=Enum.KeyCode[v] end) end})
 
 local FOVTog = MR:AddToggle("CamFOVOn", {Text="Override Camera FOV", Default=false, Callback=function(v) S.Mov.FOVOn=v; if not v then pcall(function() workspace.CurrentCamera.FieldOfView = 70 end) end end})
 local FOVSett = MR:AddDependencyBox(); FOVSett:SetupDependencies({{FOVTog, true}})
@@ -1239,7 +1441,7 @@ end))
 
 tIns(Conns, UIS.InputBegan:Connect(function(inp, gpe)
     if gpe then return end
-    if inp.KeyCode == _blinkKC and S.Aim.Target then
+    if S.Mov.BlinkOn and _blinkKC ~= Enum.KeyCode.Unknown and inp.KeyCode == _blinkKC and S.Aim.Target then
         local tc = CC[S.Aim.Target]
         local mc = CC[LP]
         if tc and tc.HRP and mc and mc.HRP then
@@ -1248,14 +1450,14 @@ tIns(Conns, UIS.InputBegan:Connect(function(inp, gpe)
         end
     elseif inp.KeyCode.Name == S.Mov.NoclipKey then
         local ns = not S.Mov.Noclip; SetNC(ns); Lib:Notify("Noclip "..(ns and "ON" or "OFF"), 2, "ghost")
-    elseif inp.KeyCode == _aimKC or (S.Aim.Key == "RightClick" and inp.UserInputType == Enum.UserInputType.MouseButton2) then
+    elseif (_aimKC ~= Enum.KeyCode.Unknown and inp.KeyCode == _aimKC) or (S.Aim.Key == "RightClick" and inp.UserInputType == Enum.UserInputType.MouseButton2) then
         S.Aim.IsAiming = true
         S.Aim.HasLockedThisPress = false
     end
 end))
 
 tIns(Conns, UIS.InputEnded:Connect(function(inp)
-    if inp.KeyCode == _aimKC or (S.Aim.Key == "RightClick" and inp.UserInputType == Enum.UserInputType.MouseButton2) then
+    if (_aimKC ~= Enum.KeyCode.Unknown and inp.KeyCode == _aimKC) or (S.Aim.Key == "RightClick" and inp.UserInputType == Enum.UserInputType.MouseButton2) then
         S.Aim.IsAiming = false
         S.Aim.HasLockedThisPress = false
     end
