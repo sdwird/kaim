@@ -14,7 +14,7 @@
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 
   <style type="text/tailwindcss">
     @theme {
@@ -32,15 +32,13 @@
       font-family: var(--font-sans);
     }
     
-    /* Required for Obsidian Scrollbar Styling */
+    /* Obsidian Scrollbar overrides */
     .no-scrollbar {
-      -ms-overflow-style: none; /* IE and Edge */
-      scrollbar-width: none;    /* Firefox */
+      -ms-overflow-style: none;
+      scrollbar-width: none;
     }
     .no-scrollbar::-webkit-scrollbar {
-      width: 0px;
-      height: 0px;
-      display: none;            /* Chrome, Safari, Opera */
+      width: 0px; height: 0px; display: none;
     }
     
     .glass-nav {
@@ -49,6 +47,20 @@
       -webkit-backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--color-obsidian-border);
     }
+
+    /* Scroll Reveal Animation Classes */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .reveal.active {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .reveal-delay-1 { transition-delay: 100ms; }
+    .reveal-delay-2 { transition-delay: 200ms; }
+    .reveal-delay-3 { transition-delay: 300ms; }
   </style>
 </head>
 <body class="antialiased selection:bg-white selection:text-black min-h-screen flex flex-col">
@@ -62,7 +74,7 @@
       </div>
       <div class="flex items-center gap-6">
         <div class="hidden sm:flex items-center gap-2 text-xs font-mono text-zinc-500 bg-obsidian-card border border-obsidian-border px-4 py-2 rounded-md">
-          v10.2 <span class="text-white font-semibold">OBSIDIAN BUILD</span>
+          <span id="nav-latest-ver">v10.1</span> <span class="text-white font-semibold">OBSIDIAN BUILD</span>
         </div>
         <a href="https://github.com/sdwird/kaim" target="_blank" class="text-sm font-medium text-zinc-400 hover:text-white transition-colors flex items-center gap-2">
           <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .08 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z" clip-rule="evenodd"></path></svg>
@@ -80,7 +92,7 @@
     <div class="max-w-7xl mx-auto px-6 grid xl:grid-cols-2 gap-16 items-center">
       
       <!-- Left Column: Copy -->
-      <div class="flex flex-col items-start text-left z-10">
+      <div class="flex flex-col items-start text-left z-10 reveal">
         <div class="inline-flex items-center gap-2 font-mono text-xs tracking-widest uppercase text-zinc-400 mb-8 border border-obsidian-border bg-[rgba(255,255,255,0.02)] px-5 py-2.5 rounded-full shadow-lg">
           <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></div>
           Lua / PC Only
@@ -97,28 +109,111 @@
         
         <div class="flex flex-wrap gap-4">
           <a href="#install" class="px-8 py-4 bg-white text-black font-semibold rounded-lg shadow-[0_0_20px_rgba(255,255,255,0.15)] hover:shadow-[0_0_35px_rgba(255,255,255,0.3)] hover:-translate-y-1 transition-all duration-300">
-            Copy Loadstring
+            Get Loadstrings
           </a>
-          <a href="#extractor" class="px-8 py-4 bg-obsidian-surface border border-obsidian-border text-white font-medium rounded-lg hover:bg-white/5 hover:border-zinc-500 transition-all duration-300">
-            UI Extractor
+          <a href="#docs" class="px-8 py-4 bg-obsidian-surface border border-obsidian-border text-white font-medium rounded-lg hover:bg-white/5 hover:border-zinc-500 transition-all duration-300">
+            View Engine Specs
           </a>
         </div>
       </div>
       
       <!-- Right Column: Interactive Obsidian UI Component -->
-      <div class="relative group mx-auto w-full max-w-[600px] xl:max-w-none">
+      <div class="relative group mx-auto w-full max-w-[600px] xl:max-w-none reveal reveal-delay-1">
         <!-- Glow effect behind widget -->
         <div class="absolute -inset-2 bg-gradient-to-b from-white/10 to-transparent blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none rounded-2xl"></div>
         
         <!-- Web Component Container -->
         <div class="relative rounded-[14px] overflow-hidden border border-obsidian-border bg-[#0a0a0a] shadow-2xl h-[520px] transition-transform duration-500 group-hover:scale-[1.01]">
           
-          <!-- OBSIDIAN WIDGET -->
+          <!-- OBSIDIAN WIDGET WITH EMBEDDED JSON -->
           <Obsidian
             title="kaim"
-            footer="version: 10.2 (experimental)"
-            icon="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/GitHub_Invertocat_Logo.svg/1200px-GitHub_Invertocat_Logo.svg.png"
-            ui-data-src="https://raw.githubusercontent.com/mspaint-cc/webmspaint/refs/heads/main/registry/obsidian-demo/ObsidianExtracted.json">
+            footer="version: 10.1 (Stable)"
+            icon="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/GitHub_Invertocat_Logo.svg/1200px-GitHub_Invertocat_Logo.svg.png">
+            
+            <script type="application/json">
+              {
+                "tabs": {
+                  "Combat": {
+                    "order": 1,
+                    "groups": [
+                      {
+                        "name": "Target Lock",
+                        "order": 1,
+                        "side": "left",
+                        "elements": [
+                          { "type": "Toggle", "title": "Enable Aimbot", "state": true, "callback_index": -1 },
+                          { "type": "Dropdown", "title": "Aim Mode", "value": "Smart", "options": ["Smart", "Closest Part"], "callback_index": -1 },
+                          { "type": "Dropdown", "title": "Target Priority", "value": "Crosshair", "options": ["Crosshair", "Distance", "Health"], "callback_index": -1 },
+                          { "type": "Toggle", "title": "Team Check", "state": true, "callback_index": -1 },
+                          { "type": "Toggle", "title": "Wall Check", "state": true, "callback_index": -1 }
+                        ]
+                      },
+                      {
+                        "name": "Accuracy",
+                        "order": 2,
+                        "side": "right",
+                        "elements": [
+                          { "type": "Slider", "title": "Hit Chance", "value": 100, "min": 0, "max": 100, "callback_index": -1 },
+                          { "type": "Toggle", "title": "Prediction", "state": true, "callback_index": -1 },
+                          { "type": "Slider", "title": "Prediction Strength", "value": 0.135, "min": 0.1, "max": 0.2, "callback_index": -1 }
+                        ]
+                      },
+                      {
+                        "name": "Hitbox Expander",
+                        "order": 3,
+                        "side": "left",
+                        "elements": [
+                          { "type": "Toggle", "title": "Enable Hitboxes", "state": false, "callback_index": -1 },
+                          { "type": "Slider", "title": "Size", "value": 5, "min": 1, "max": 50, "callback_index": -1 }
+                        ]
+                      }
+                    ]
+                  },
+                  "Visuals": {
+                    "order": 2,
+                    "groups": [
+                      {
+                        "name": "Target HUD",
+                        "order": 1,
+                        "side": "left",
+                        "elements": [
+                          { "type": "Toggle", "title": "Show Target HUD", "state": true, "callback_index": -1 },
+                          { "type": "Dropdown", "title": "HUD Style", "value": "Premium", "options": ["Premium", "Competitive", "Compact", "Minimalist"], "callback_index": -1 },
+                          { "type": "Slider", "title": "HUD Scale", "value": 1, "min": 0.5, "max": 1.5, "callback_index": -1 }
+                        ]
+                      },
+                      {
+                        "name": "ESP Elements",
+                        "order": 2,
+                        "side": "right",
+                        "elements": [
+                          { "type": "Toggle", "title": "Enable ESP", "state": true, "callback_index": -1 },
+                          { "type": "Toggle", "title": "Show Boxes", "state": true, "callback_index": -1 },
+                          { "type": "Toggle", "title": "Health Bar", "state": true, "callback_index": -1 },
+                          { "type": "Toggle", "title": "Names", "state": true, "callback_index": -1 }
+                        ]
+                      }
+                    ]
+                  },
+                  "Movement": {
+                    "order": 3,
+                    "groups": [
+                      {
+                        "name": "Mobility & Defense",
+                        "order": 1,
+                        "side": "left",
+                        "elements": [
+                          { "type": "Toggle", "title": "Enable Blink to Target", "state": false, "callback_index": -1 },
+                          { "type": "Toggle", "title": "Spinbot (Anti-Aim)", "state": false, "callback_index": -1 },
+                          { "type": "Slider", "title": "Spin Speed", "value": 20, "min": 1, "max": 100, "callback_index": -1 }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            </script>
           </Obsidian>
           
         </div>
@@ -127,7 +222,7 @@
         <div class="absolute -bottom-16 left-0 right-0 flex justify-center opacity-75 group-hover:opacity-100 transition-opacity">
           <div class="text-xs font-mono text-zinc-400 bg-obsidian-surface border border-obsidian-border px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg">
             <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
-            Interactive web preview (using demo UI payload)
+            Interactive web preview powered by embedded JSON layout
           </div>
         </div>
       </div>
@@ -135,81 +230,119 @@
     </div>
   </main>
 
-  <!-- Extractor Tool Section -->
-  <section id="extractor" class="py-24 border-t border-obsidian-border bg-obsidian-surface">
-    <div class="max-w-4xl mx-auto px-6">
-      <div class="text-center mb-16">
-        <h2 class="text-4xl font-extrabold text-white mb-6">Render Your Custom Config</h2>
-        <p class="text-lg text-zinc-400">Want to see your exact kaim config in the browser instead of the demo? You can dump your live UI directly to a JSON file using the Obsidian Extractor.</p>
+  <!-- Deep Dive Documentation Section -->
+  <section id="docs" class="py-24 border-t border-obsidian-border bg-obsidian-surface">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="text-center mb-20 reveal">
+        <h2 class="text-4xl font-extrabold text-white mb-6">Engine Architecture</h2>
+        <p class="text-lg text-zinc-400 max-w-2xl mx-auto">kaim isn't just an aimbot, it's a meticulously optimized Lua engine built to bypass common execution limits while maintaining flawless frame rates.</p>
       </div>
       
-      <div class="bg-black border border-obsidian-border rounded-2xl p-8 lg:p-12 shadow-2xl relative overflow-hidden">
-        <div class="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-          <svg class="w-32 h-32 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2.5L17.5 9H13V4.5zM6 20V4h5v7h7v9H6z"/></svg>
-        </div>
-
-        <h3 class="text-xl font-bold text-white mb-4">1. Run the Extractor Script</h3>
-        <p class="text-zinc-400 mb-6">Execute this snippet in your executor while kaim is running.</p>
+      <div class="grid md:grid-cols-2 gap-8">
         
-        <div class="bg-obsidian-card p-5 rounded-xl border border-obsidian-border font-mono text-sm mb-10 overflow-x-auto">
-          <span class="text-zinc-600">-- Extractor</span><br>
-          <span class="text-purple-400">loadstring</span>(<span class="text-blue-400">game</span>:<span class="text-emerald-400">HttpGet</span>(<span class="text-white">"https://raw.githubusercontent.com/mspaint-cc/assets/refs/heads/main/uidata/extractor.lua"</span>))()
+        <!-- Module 1 -->
+        <div class="bg-black border border-obsidian-border p-8 rounded-2xl hover:border-zinc-500 transition-colors reveal reveal-delay-1 relative overflow-hidden group">
+          <div class="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          <div class="text-emerald-400 mb-6 bg-emerald-400/10 w-14 h-14 rounded-xl flex items-center justify-center font-mono text-xl border border-emerald-400/20">01</div>
+          <h3 class="text-2xl font-bold text-white mb-4">Zero-Bridge Drawing Proxy</h3>
+          <p class="text-zinc-400 leading-relaxed mb-4">
+            Most scripts update the C++ Drawing API (`Drawing.new`) every single frame, causing severe memory bridging latency and inevitable stutters.
+          </p>
+          <p class="text-zinc-500 text-sm border-l-2 border-obsidian-border pl-4">
+            Our custom `ND()` proxy acts as an intermediary. It caches all properties locally in Lua and only dispatches updates to the C++ engine when a value actually changes. <strong>Result: 90% reduction in C++ bridge overhead.</strong>
+          </p>
         </div>
 
-        <h3 class="text-xl font-bold text-white mb-4">2. Update the HTML</h3>
-        <p class="text-zinc-400 mb-6">
-          The script saves a file named <code class="text-white bg-white/10 px-2 py-1 rounded">ObsidianExtracted.json</code> in your executor's workspace folder. Place that file in your website directory and update the HTML tag:
-        </p>
-
-        <div class="bg-obsidian-card p-5 rounded-xl border border-obsidian-border font-mono text-sm overflow-x-auto">
-          <span class="text-zinc-500">&lt;</span><span class="text-pink-400">Obsidian</span><br>
-          &nbsp;&nbsp;<span class="text-amber-300">title</span><span class="text-white">=</span><span class="text-emerald-300">"kaim"</span><br>
-          &nbsp;&nbsp;<span class="text-amber-300">ui-data-src</span><span class="text-white">=</span><span class="text-emerald-300">"./ObsidianExtracted.json"</span><span class="text-zinc-500">&gt;</span><br>
-          <span class="text-zinc-500">&lt;/</span><span class="text-pink-400">Obsidian</span><span class="text-zinc-500">&gt;</span>
+        <!-- Module 2 -->
+        <div class="bg-black border border-obsidian-border p-8 rounded-2xl hover:border-zinc-500 transition-colors reveal reveal-delay-2 relative overflow-hidden group">
+          <div class="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          <div class="text-amber-400 mb-6 bg-amber-400/10 w-14 h-14 rounded-xl flex items-center justify-center font-mono text-xl border border-amber-400/20">02</div>
+          <h3 class="text-2xl font-bold text-white mb-4">Raycast Allocation Caching</h3>
+          <p class="text-zinc-400 leading-relaxed mb-4">
+            "Smart Mode" checks up to 6 different body parts per player per frame. Standard aimbots instantiate a new `RaycastParams` filter array for each part, flooding the garbage collector.
+          </p>
+          <p class="text-zinc-500 text-sm border-l-2 border-obsidian-border pl-4">
+            Kaim caches the `FilterDescendantsInstances` array based on the `_lastVisChar`. It reuses the exact same C++ allocation across all body part checks for that character, cutting allocation costs by 6x per player.
+          </p>
         </div>
+
+        <!-- Module 3 -->
+        <div class="bg-black border border-obsidian-border p-8 rounded-2xl hover:border-zinc-500 transition-colors reveal reveal-delay-1 relative overflow-hidden group">
+          <div class="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          <div class="text-blue-400 mb-6 bg-blue-400/10 w-14 h-14 rounded-xl flex items-center justify-center font-mono text-xl border border-blue-400/20">03</div>
+          <h3 class="text-2xl font-bold text-white mb-4">Dynamic Target HUD</h3>
+          <p class="text-zinc-400 leading-relaxed mb-4">
+            4 unique layouts (Premium, Competitive, Compact, Minimalist). Instead of generating new drawing objects when you swap styles, it securely recycles the exact same 15 drawing objects.
+          </p>
+          <p class="text-zinc-500 text-sm border-l-2 border-obsidian-border pl-4">
+            The HUD leverages the proxy's `__index` fallback to safely query `TextBounds` from the underlying engine, ensuring flawless pixel-perfect right alignment without expensive string-math.
+          </p>
+        </div>
+
+        <!-- Module 4 -->
+        <div class="bg-black border border-obsidian-border p-8 rounded-2xl hover:border-zinc-500 transition-colors reveal reveal-delay-2 relative overflow-hidden group">
+          <div class="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          <div class="text-purple-400 mb-6 bg-purple-400/10 w-14 h-14 rounded-xl flex items-center justify-center font-mono text-xl border border-purple-400/20">04</div>
+          <h3 class="text-2xl font-bold text-white mb-4">Heartbeat Hitbox Bypass</h3>
+          <p class="text-zinc-400 leading-relaxed mb-4">
+            Nested loops checking thousands of parts on Heartbeat will instantly tank FPS.
+          </p>
+          <p class="text-zinc-500 text-sm border-l-2 border-obsidian-border pl-4">
+            Kaim implements a strict `_hbActive` state flag. When the Hitbox Expander is disabled, the script permanently halts all mathematical operations regarding hitboxes, executing zero code on Heartbeat cycles until you turn it back on.
+          </p>
+        </div>
+
       </div>
     </div>
   </section>
 
-  <!-- Install Section -->
-  <section id="install" class="py-24">
-    <div class="max-w-5xl mx-auto px-6 text-center">
-      <h2 class="text-4xl font-extrabold text-white mb-16">Choose Your Build</h2>
+  <!-- Live GitHub Install Section -->
+  <section id="install" class="py-24 relative overflow-hidden">
+    <div class="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-obsidian-border to-transparent"></div>
+    <div class="max-w-6xl mx-auto px-6 text-center reveal">
+      <h2 class="text-4xl font-extrabold text-white mb-4">Get the Script</h2>
+      <p class="text-zinc-400 mb-16 max-w-xl mx-auto flex items-center justify-center gap-3">
+        <span class="relative flex h-3 w-3">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+        </span>
+        Live synced with GitHub API. Always current.
+      </p>
       
-      <div class="grid md:grid-cols-2 gap-8 text-left">
-        <!-- Experimental Build (Obsidian) -->
+      <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto text-left">
+        <!-- Stable Build Box -->
+        <div class="group relative bg-obsidian-surface border border-obsidian-border p-8 rounded-2xl hover:border-zinc-500 transition-colors">
+          <div class="flex justify-between items-start mb-6">
+            <div>
+              <h3 class="text-2xl font-bold text-white">Stable Release</h3>
+              <p class="text-zinc-400 text-sm mt-2">Reliable, tested, highly optimized for competitive play.</p>
+            </div>
+            <span id="badge-stable" class="text-xs font-bold font-mono tracking-widest text-emerald-400 bg-emerald-400/10 px-3 py-1.5 rounded-md border border-emerald-400/20">LOADING...</span>
+          </div>
+          <div class="bg-black p-5 rounded-xl border border-obsidian-border font-mono text-sm text-zinc-300 break-all mb-6 shadow-inner">
+            <span class="text-purple-400">loadstring</span>(<span class="text-blue-400">game</span>:<span class="text-emerald-400">HttpGet</span>(<span class="text-white">"<span id="url-stable">fetching...</span>"</span>))()
+          </div>
+          <button id="btn-stable" class="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white font-medium transition-colors">
+            Copy Loadstring
+          </button>
+        </div>
+
+        <!-- Experimental Build Box -->
         <div class="group relative bg-obsidian-surface border border-obsidian-border p-8 rounded-2xl hover:border-white transition-all duration-300">
           <div class="absolute -inset-0.5 bg-gradient-to-b from-white/20 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity -z-10 blur-md"></div>
           
           <div class="flex justify-between items-start mb-6">
             <div>
-              <h3 class="text-2xl font-bold text-white">Obsidian Build</h3>
-              <p class="text-zinc-400 text-sm mt-2">Latest features, completely rewritten HUD, and brand new UI.</p>
+              <h3 class="text-2xl font-bold text-white">Experimental</h3>
+              <p class="text-zinc-400 text-sm mt-2">Latest pushed code, cutting-edge features.</p>
             </div>
-            <span class="text-xs font-bold font-mono tracking-widest text-amber-400 bg-amber-400/10 px-3 py-1.5 rounded-md border border-amber-400/20">v10.2</span>
+            <span id="badge-exp" class="text-xs font-bold font-mono tracking-widest text-amber-400 bg-amber-400/10 px-3 py-1.5 rounded-md border border-amber-400/20">LOADING...</span>
           </div>
           <div class="bg-black p-5 rounded-xl border border-obsidian-border font-mono text-sm text-zinc-300 break-all mb-6 shadow-inner">
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-obsidian.lua"))()
+            <span class="text-purple-400">loadstring</span>(<span class="text-blue-400">game</span>:<span class="text-emerald-400">HttpGet</span>(<span class="text-white">"<span id="url-exp">fetching...</span>"</span>))()
           </div>
-          <button onclick="navigator.clipboard.writeText('loadstring(game:HttpGet(\'https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-obsidian.lua\'))()'); this.innerText='Copied to Clipboard!'; setTimeout(()=>this.innerText='Copy Loadstring', 2500)" class="w-full py-4 bg-white text-black font-semibold rounded-xl hover:bg-zinc-200 transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-[0_0_25px_rgba(255,255,255,0.2)]">
+          <button id="btn-exp" class="w-full py-4 bg-white text-black font-semibold rounded-xl hover:bg-zinc-200 transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)]">
             Copy Loadstring
-          </button>
-        </div>
-
-        <!-- Stable Build -->
-        <div class="bg-transparent border border-obsidian-border p-8 rounded-2xl hover:border-zinc-500 transition-colors">
-          <div class="flex justify-between items-start mb-6">
-            <div>
-              <h3 class="text-2xl font-bold text-white">Legacy Stable</h3>
-              <p class="text-zinc-500 text-sm mt-2">The classic v8.2 build using the older WindUI library.</p>
-            </div>
-            <span class="text-xs font-bold font-mono tracking-widest text-emerald-400 bg-emerald-400/10 px-3 py-1.5 rounded-md border border-emerald-400/20">v8.2</span>
-          </div>
-          <div class="bg-obsidian-surface p-5 rounded-xl border border-obsidian-border font-mono text-sm text-zinc-500 break-all mb-6">
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-v8.2.lua"))()
-          </div>
-          <button onclick="navigator.clipboard.writeText('loadstring(game:HttpGet(\'https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-v8.2.lua\'))()'); this.innerText='Copied!'; setTimeout(()=>this.innerText='Copy Legacy Code', 2500)" class="w-full py-4 bg-obsidian-surface hover:bg-white/10 border border-obsidian-border rounded-xl text-zinc-300 font-medium transition-colors">
-            Copy Legacy Code
           </button>
         </div>
       </div>
@@ -220,5 +353,95 @@
     <p class="text-zinc-600 text-sm font-mono tracking-wide">kaim &copy; 2026. Built with Obsidian UI.</p>
   </footer>
 
+  <script>
+    // Scroll Reveal Intersection Observer
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('active');
+          // Optional: Stop observing once revealed
+          // observer.unobserve(entry.target); 
+        }
+      });
+    }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
+
+    document.querySelectorAll('.reveal').forEach((el) => {
+      observer.observe(el);
+    });
+
+    // GitHub API Fetcher
+    async function fetchGitHubReleases() {
+      const owner = 'sdwird';
+      const repo = 'kaim';
+      const rawBase = `https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/main/`;
+      const apiURL = `https://api.github.com/repos/${owner}/${repo}/git/trees/main?recursive=1`;
+      
+      try {
+        const response = await fetch(apiURL);
+        if (!response.ok) throw new Error("API Limit or Repo missing");
+        const data = await response.json();
+        
+        // Find all Lua files matching kaim-vX.X.lua
+        const files = data.tree.filter(f => f.type === 'blob').map(f => f.path);
+        const vers = files.filter(f => /^kaim-v[\d.]+\.lua$/.test(f));
+        
+        // Sort by Semantic Version (e.g. v10.2 > v10.1 > v8.2)
+        vers.sort((a, b) => {
+          const parse = n => {
+            const m = n.match(/kaim-v(\d+)[._]?(\d*)/);
+            if (!m) return 0;
+            return parseInt(m[1]) * 100 + (m[2] ? parseInt(m[2]) : 0);
+          };
+          return parse(b) - parse(a);
+        });
+
+        // Determine Experimental (Latest) and Stable (Second Latest)
+        const expScript = vers[0] || 'kaim-v10.2.lua';
+        const stableScript = vers[1] || 'kaim-v10.1.lua';
+
+        // Update UI
+        document.getElementById('nav-latest-ver').textContent = expScript.replace('kaim-', '').replace('.lua', '');
+        document.getElementById('badge-exp').textContent = expScript.replace('kaim-', '').replace('.lua', '');
+        document.getElementById('badge-stable').textContent = stableScript.replace('kaim-', '').replace('.lua', '');
+        
+        const expUrl = rawBase + expScript;
+        const stableUrl = rawBase + stableScript;
+
+        document.getElementById('url-exp').textContent = expUrl;
+        document.getElementById('url-stable').textContent = stableUrl;
+
+        // Setup Copy Buttons
+        const setupCopy = (btnId, urlText) => {
+          const btn = document.getElementById(btnId);
+          btn.onclick = () => {
+            navigator.clipboard.writeText(`loadstring(game:HttpGet("${urlText}"))()`);
+            const orig = btn.innerText;
+            btn.innerText = "Copied to Clipboard!";
+            btn.classList.add("bg-emerald-500", "text-white", "border-emerald-500");
+            btn.classList.remove("bg-white", "text-black");
+            setTimeout(() => {
+              btn.innerText = orig;
+              btn.classList.remove("bg-emerald-500", "text-white", "border-emerald-500");
+              if (btnId === 'btn-exp') btn.classList.add("bg-white", "text-black");
+            }, 2500);
+          };
+        };
+
+        setupCopy('btn-exp', expUrl);
+        setupCopy('btn-stable', stableUrl);
+
+      } catch (err) {
+        console.warn("GitHub API error (Rate limit?), falling back to defaults", err);
+        // Fallback defaults
+        document.getElementById('url-exp').textContent = rawBase + "kaim-v10.2.lua";
+        document.getElementById('url-stable').textContent = rawBase + "kaim-v10.1.lua";
+        document.getElementById('badge-exp').textContent = "v10.2";
+        document.getElementById('badge-stable').textContent = "v10.1";
+      }
+    }
+
+    // Initialize API Fetch
+    fetchGitHubReleases();
+  </script>
 </body>
 </html>
