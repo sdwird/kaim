@@ -1,447 +1,1081 @@
 <!DOCTYPE html>
-<html lang="en" class="dark scroll-smooth">
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <meta name="description" content="kaim — Lua aimbot script for Roblox. Powered by Obsidian UI."/>
-  <title>kaim | Obsidian UI</title>
-  
-  <!-- Tailwind CSS -->
+  <meta name="description" content="kaim — Precision aimbot script for Roblox. Built on Obsidian UI."/>
+  <title>kaim — Obsidian</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+
+  <!-- Tailwind -->
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  
-  <!-- Obsidian Web Component -->
+  <!-- Obsidian Widget -->
   <script src="https://www.mspaint.cc/widgets/obsidian.js"></script>
 
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
 
-  <style type="text/tailwindcss">
-    @theme {
-      --color-obsidian-bg: #050505;
-      --color-obsidian-surface: #0a0a0a;
-      --color-obsidian-card: #0f0f0f;
-      --color-obsidian-border: #222222;
-      --font-sans: 'Inter', sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
+    :root {
+      --bg: #020203;
+      --surface: #08080c;
+      --card: #0c0c12;
+      --border: #1a1a24;
+      --border-h: #2a2a3a;
+      --text: #e8e8f0;
+      --muted: #6e6e8a;
+      --dim: #3e3e56;
+      --accent: #6366f1;
+      --accent2: #818cf8;
+      --accent-glow: rgba(99, 102, 241, 0.4);
+      --green: #22c55e;
+      --amber: #f59e0b;
     }
-    
+
     body {
-      background-color: var(--color-obsidian-bg);
-      color: #e5e5e5;
-      font-family: var(--font-sans);
-    }
-    
-    /* Obsidian Scrollbar overrides */
-    .no-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
-    .no-scrollbar::-webkit-scrollbar {
-      width: 0px; height: 0px; display: none;
-    }
-    
-    .glass-nav {
-      background: rgba(5, 5, 5, 0.75);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--color-obsidian-border);
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      overflow-x: hidden;
+      line-height: 1.6;
+      cursor: none;
     }
 
-    /* Scroll Reveal Animation Classes */
-    .reveal {
-      opacity: 0;
-      transform: translateY(30px);
-      transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+    /* ═══ CUSTOM CURSOR ═══ */
+    .cursor-dot {
+      position: fixed; width: 5px; height: 5px; border-radius: 50%;
+      background: var(--accent2); box-shadow: 0 0 12px var(--accent-glow);
+      pointer-events: none; z-index: 10000; transform: translate(-50%,-50%);
+      transition: width 0.15s, height 0.15s, background 0.15s;
     }
-    .reveal.active {
-      opacity: 1;
-      transform: translateY(0);
+    .cursor-ring {
+      position: fixed; width: 36px; height: 36px; border-radius: 50%;
+      border: 1.5px solid rgba(129,140,248,0.3);
+      pointer-events: none; z-index: 9999; transform: translate(-50%,-50%);
+      transition: width 0.2s, height 0.2s, border-color 0.2s, background 0.2s;
     }
-    .reveal-delay-1 { transition-delay: 100ms; }
-    .reveal-delay-2 { transition-delay: 200ms; }
-    .reveal-delay-3 { transition-delay: 300ms; }
+    body.cursor-hover .cursor-ring {
+      width: 52px; height: 52px; border-color: var(--accent2);
+      background: rgba(99,102,241,0.06);
+    }
+
+    /* ═══ BACKGROUND ═══ */
+    .bg-mesh {
+      position: fixed; inset: 0; z-index: -2; pointer-events: none;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 40%, rgba(99,102,241,0.06), transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 30%, rgba(139,92,246,0.04), transparent 50%),
+        radial-gradient(ellipse 50% 60% at 50% 80%, rgba(59,130,246,0.03), transparent 50%);
+    }
+    .bg-grid {
+      position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 20%, transparent 100%);
+      -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 20%, transparent 100%);
+    }
+
+    /* ═══ NAV ═══ */
+    .nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 0 32px; transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+      border-bottom: 1px solid transparent;
+    }
+    .nav.scrolled {
+      background: rgba(2,2,3,0.82);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-color: var(--border);
+    }
+    .nav-inner {
+      max-width: 1200px; margin: 0 auto; height: 72px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo {
+      font-size: 20px; font-weight: 800; color: #fff;
+      letter-spacing: -0.04em; text-decoration: none;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .nav-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--green); box-shadow: 0 0 10px var(--green);
+      animation: pulse-dot 2s infinite;
+    }
+    @keyframes pulse-dot { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.7); } }
+    .nav-right { display: flex; align-items: center; gap: 16px; }
+    .nav-badge {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: var(--muted); background: var(--card);
+      border: 1px solid var(--border); padding: 6px 16px; border-radius: 8px;
+    }
+    .nav-badge strong { color: var(--accent2); font-weight: 600; }
+    .nav-gh {
+      display: flex; align-items: center; gap: 8px;
+      color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 500;
+      padding: 8px 18px; border: 1px solid var(--border); border-radius: 8px;
+      background: rgba(255,255,255,0.02); transition: all 0.3s;
+    }
+    .nav-gh:hover { border-color: var(--accent); color: #fff; background: rgba(99,102,241,0.08); }
+
+    /* ═══ HERO ═══ */
+    .hero {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 120px 32px 80px; position: relative;
+    }
+    .hero-inner {
+      max-width: 1200px; margin: 0 auto; width: 100%;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center;
+    }
+    .hero-text { display: flex; flex-direction: column; align-items: flex-start; }
+    .hero-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted);
+      border: 1px solid var(--border); background: rgba(99,102,241,0.04);
+      padding: 7px 18px; border-radius: 100px; margin-bottom: 28px;
+      opacity: 0; animation: rise 0.7s 0.1s cubic-bezier(0.16,1,0.3,1) forwards;
+    }
+    .hero-pill .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .hero-title {
+      font-size: clamp(56px, 8vw, 96px); font-weight: 900;
+      letter-spacing: -0.05em; line-height: 0.92; color: #fff;
+      margin-bottom: 24px;
+      opacity: 0; animation: rise 0.8s 0.2s cubic-bezier(0.16,1,0.3,1) forwards;
+    }
+    .hero-title .grad {
+      background: linear-gradient(135deg, #fff 0%, var(--accent2) 50%, #a78bfa 100%);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .hero-sub {
+      font-size: 18px; color: var(--muted); max-width: 440px;
+      margin-bottom: 36px; line-height: 1.7;
+      opacity: 0; animation: rise 0.8s 0.35s cubic-bezier(0.16,1,0.3,1) forwards;
+    }
+    .hero-actions {
+      display: flex; gap: 14px; flex-wrap: wrap;
+      opacity: 0; animation: rise 0.8s 0.5s cubic-bezier(0.16,1,0.3,1) forwards;
+    }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff; text-decoration: none;
+      padding: 14px 32px; border-radius: 10px; font-weight: 600; font-size: 14px;
+      box-shadow: 0 4px 24px var(--accent-glow); border: none; cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    .btn-primary:hover { background: var(--accent2); transform: translateY(-2px); box-shadow: 0 8px 32px var(--accent-glow); }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 8px;
+      color: var(--text); text-decoration: none;
+      padding: 14px 32px; border-radius: 10px; font-weight: 500; font-size: 14px;
+      border: 1px solid var(--border); background: rgba(255,255,255,0.02); cursor: pointer;
+      transition: all 0.3s;
+    }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent2); background: rgba(99,102,241,0.06); }
+
+    .hero-stats {
+      display: flex; align-items: center; gap: 36px; margin-top: 40px;
+      opacity: 0; animation: rise 0.8s 0.65s cubic-bezier(0.16,1,0.3,1) forwards;
+    }
+    .stat { text-align: center; }
+    .stat-num { font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: 700; color: #fff; line-height: 1; }
+    .stat-label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.12em; margin-top: 6px; }
+    .stat-div { width: 1px; height: 36px; background: var(--border); }
+
+    @keyframes rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ═══ HERO RIGHT: OBSIDIAN WIDGET ═══ */
+    .hero-widget-wrap {
+      position: relative;
+      opacity: 0; animation: rise 1s 0.4s cubic-bezier(0.16,1,0.3,1) forwards;
+    }
+    .hero-widget-glow {
+      position: absolute; inset: -20px;
+      background: radial-gradient(ellipse at center, var(--accent-glow) 0%, transparent 70%);
+      opacity: 0.3; filter: blur(60px); pointer-events: none;
+      animation: glow-pulse 4s ease-in-out infinite alternate;
+    }
+    @keyframes glow-pulse { from { opacity: 0.2; } to { opacity: 0.45; } }
+    .hero-widget {
+      position: relative; border-radius: 16px; overflow: hidden;
+      border: 1px solid var(--border); background: #080810;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03);
+      height: 520px;
+      transition: transform 0.5s cubic-bezier(0.4,0,0.2,1), box-shadow 0.5s;
+    }
+    .hero-widget:hover {
+      transform: translateY(-6px) scale(1.005);
+      box-shadow: 0 40px 100px rgba(0,0,0,0.7), 0 0 60px rgba(99,102,241,0.1);
+    }
+    .widget-caption {
+      text-align: center; margin-top: 20px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: var(--dim); display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+
+    /* ═══ SCROLLBAR OVERRIDES ═══ */
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .no-scrollbar::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+    /* ═══ TICKER STRIPE ═══ */
+    .ticker {
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      padding: 16px 0; overflow: hidden;
+      background: linear-gradient(90deg, var(--bg), rgba(99,102,241,0.02), var(--bg));
+    }
+    .ticker-track {
+      display: flex; gap: 56px; white-space: nowrap; width: max-content;
+      animation: scroll-ticker 35s linear infinite;
+    }
+    .ticker-item {
+      display: flex; align-items: center; gap: 12px;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      color: var(--dim); letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .ticker-dot { width: 4px; height: 4px; background: var(--accent); border-radius: 1px; transform: rotate(45deg); opacity: 0.5; }
+    @keyframes scroll-ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+    /* ═══ SECTION COMMONS ═══ */
+    .section { padding: 120px 32px; position: relative; }
+    .section-inner { max-width: 1200px; margin: 0 auto; }
+    .section-label {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent2);
+      margin-bottom: 14px; display: flex; align-items: center; gap: 10px;
+    }
+    .section-label::before { content: ''; width: 28px; height: 1px; background: var(--accent); opacity: 0.5; }
+    .section-title { font-size: 40px; font-weight: 800; color: #fff; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 14px; }
+    .section-desc { font-size: 16px; color: var(--muted); max-width: 540px; line-height: 1.7; }
+
+    /* ═══ SCROLL REVEAL ═══ */
+    .sr { opacity: 0; transform: translateY(32px); transition: all 0.8s cubic-bezier(0.16,1,0.3,1); }
+    .sr.visible { opacity: 1; transform: translateY(0); }
+    .sr-d1 { transition-delay: 80ms; } .sr-d2 { transition-delay: 160ms; }
+    .sr-d3 { transition-delay: 240ms; } .sr-d4 { transition-delay: 320ms; }
+    .sr-d5 { transition-delay: 400ms; } .sr-d6 { transition-delay: 480ms; }
+
+    /* ═══ FEATURES BENTO ═══ */
+    .bento { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .bento-card {
+      position: relative; background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 36px 32px; overflow: hidden; cursor: default;
+      transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+    }
+    .bento-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at 30% 20%, rgba(99,102,241,0.08), transparent 65%);
+      opacity: 0; transition: opacity 0.4s; pointer-events: none;
+    }
+    .bento-card:hover::before { opacity: 1; }
+    .bento-card:hover { border-color: rgba(99,102,241,0.35); transform: translateY(-4px); box-shadow: 0 16px 48px rgba(0,0,0,0.4); }
+    .bento-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.18);
+      display: flex; align-items: center; justify-content: center; font-size: 22px;
+      margin-bottom: 22px;
+    }
+    .bento-card h3 { font-size: 17px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+    .bento-card p { font-size: 14px; color: var(--muted); line-height: 1.7; }
+
+    .bento-wide {
+      grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr;
+      align-items: center; gap: 40px;
+      background: linear-gradient(145deg, #0a0a14, #0d0d18);
+      border-color: rgba(99,102,241,0.15);
+    }
+    .bento-wide:hover { border-color: rgba(99,102,241,0.4); box-shadow: 0 20px 60px rgba(99,102,241,0.08); }
+    .wide-visual {
+      display: flex; flex-direction: column; gap: 10px;
+      padding: 24px; background: rgba(0,0,0,0.4); border-radius: 12px;
+      border: 1px solid rgba(99,102,241,0.1);
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    }
+    .wv-line { display: flex; align-items: center; gap: 10px; color: var(--dim); }
+    .wv-line .d { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .d-g { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .d-a { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+    .d-p { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
+    .wv-line span { color: var(--muted); }
+    .sync-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(34,197,94,0.06); border: 1px solid rgba(34,197,94,0.15);
+      padding: 6px 14px; border-radius: 6px; font-size: 11px; color: var(--green); margin-top: 12px;
+    }
+    .sync-spin { width: 12px; height: 12px; border: 2px solid rgba(34,197,94,0.2); border-top-color: var(--green); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ═══ TERMINAL ═══ */
+    .terminal {
+      background: #04040a; border: 1px solid var(--border); border-radius: 16px;
+      overflow: hidden; max-width: 820px; margin: 0 auto;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 80px rgba(99,102,241,0.05);
+    }
+    .term-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.015);
+    }
+    .term-dots { display: flex; gap: 8px; }
+    .term-dots i { display: block; width: 11px; height: 11px; border-radius: 50%; }
+    .td-r { background: #ff5f57; } .td-y { background: #febc2e; } .td-g { background: #28c840; }
+    .term-title { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim); }
+    .term-body {
+      padding: 28px 28px; font-family: 'JetBrains Mono', monospace;
+      font-size: 13px; line-height: 2.2; min-height: 260px;
+    }
+    .term-line { display: flex; align-items: flex-start; gap: 12px; opacity: 0; animation: fadein 0.25s ease forwards; }
+    .t-prompt { color: var(--accent2); flex-shrink: 0; user-select: none; }
+    .t-cmd { color: #e4e4f0; }
+    .t-info { color: var(--muted); }
+    .t-ok { color: var(--green); }
+    .t-cursor { display: inline-block; width: 8px; height: 16px; background: var(--accent2); vertical-align: middle; animation: blink 1s step-end infinite; margin-left: 4px; }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+    @keyframes fadein { to { opacity: 1; } }
+
+    /* ═══ ARCHITECTURE DOCS ═══ */
+    .arch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .arch-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      padding: 36px 32px; position: relative; overflow: hidden;
+      transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+    }
+    .arch-card::after {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at 50% 0%, rgba(99,102,241,0.05), transparent 60%);
+      opacity: 0; transition: opacity 0.4s; pointer-events: none;
+    }
+    .arch-card:hover::after { opacity: 1; }
+    .arch-card:hover { border-color: var(--border-h); transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+    .arch-num {
+      font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700;
+      width: 52px; height: 52px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center; margin-bottom: 24px;
+    }
+    .arch-card h3 { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 12px; letter-spacing: -0.01em; }
+    .arch-card > p { font-size: 14px; color: var(--muted); line-height: 1.75; margin-bottom: 16px; }
+    .arch-detail {
+      font-size: 13px; color: var(--dim); line-height: 1.7;
+      border-left: 2px solid var(--border); padding-left: 16px;
+    }
+    .arch-detail strong { color: var(--accent2); font-weight: 600; }
+    .arch-full {
+      grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start;
+      background: linear-gradient(135deg, #0a0a14, #0e0e1a);
+    }
+    .arch-code {
+      background: rgba(0,0,0,0.5); border: 1px solid var(--border); border-radius: 12px;
+      padding: 24px; font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      line-height: 1.9; color: var(--muted); overflow-x: auto;
+    }
+    .arch-code .kw { color: #c084fc; } .arch-code .fn { color: var(--accent2); }
+    .arch-code .cm { color: var(--dim); font-style: italic; } .arch-code .st { color: #6ee7b7; }
+    .arch-code .num { color: #fbbf24; }
+
+    /* ═══ INSTALL ═══ */
+    .install-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 960px; margin: 0 auto; }
+    .install-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      padding: 36px 32px; position: relative; overflow: hidden;
+      transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+    }
+    .install-card:hover { border-color: var(--border-h); transform: translateY(-3px); }
+    .install-card.featured {
+      background: linear-gradient(145deg, #0c0c18, #100f1e);
+      border-color: rgba(99,102,241,0.2);
+    }
+    .install-card.featured:hover { border-color: rgba(99,102,241,0.5); box-shadow: 0 20px 60px rgba(99,102,241,0.1); }
+    .install-badge {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 4px 12px; border-radius: 6px;
+    }
+    .install-code {
+      background: rgba(0,0,0,0.5); border: 1px solid var(--border); border-radius: 10px;
+      padding: 16px 18px; font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      color: var(--muted); margin: 20px 0; word-break: break-all; line-height: 1.8;
+    }
+    .install-code .fn { color: var(--accent2); } .install-code .kw { color: #c084fc; }
+    .install-code .st { color: #fff; }
+    .install-btn {
+      width: 100%; padding: 14px; border-radius: 10px; font-weight: 600; font-size: 14px;
+      border: none; cursor: pointer; transition: all 0.3s; font-family: 'Inter', sans-serif;
+    }
+    .install-btn-primary { background: var(--accent); color: #fff; box-shadow: 0 4px 20px var(--accent-glow); }
+    .install-btn-primary:hover { background: var(--accent2); transform: translateY(-2px); }
+    .install-btn-ghost { background: rgba(255,255,255,0.03); color: var(--text); border: 1px solid var(--border); }
+    .install-btn-ghost:hover { border-color: var(--accent); color: var(--accent2); }
+    .install-btn.copied { background: var(--green) !important; color: #fff !important; border-color: var(--green) !important; }
+
+    /* ═══ STEPS ═══ */
+    .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .step-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      padding: 36px 28px; transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+    }
+    .step-card:hover { border-color: var(--border-h); transform: translateY(-3px); }
+    .step-num {
+      font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700;
+      color: var(--accent2); background: rgba(99,102,241,0.1);
+      border: 1px solid rgba(99,102,241,0.18); border-radius: 8px;
+      padding: 5px 14px; display: inline-flex; margin-bottom: 22px;
+    }
+    .step-card h4 { font-size: 17px; font-weight: 600; color: #fff; margin-bottom: 10px; }
+    .step-card p { font-size: 14px; color: var(--muted); line-height: 1.7; }
+    .step-card code { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent2); background: rgba(99,102,241,0.08); padding: 2px 8px; border-radius: 4px; }
+
+    /* ═══ FOOTER ═══ */
+    footer {
+      border-top: 1px solid var(--border); padding: 60px 32px 72px;
+      text-align: center; background: var(--surface);
+    }
+    .f-logo { font-size: 24px; font-weight: 800; color: #fff; letter-spacing: -0.04em; margin-bottom: 20px; }
+    .f-links { display: flex; gap: 28px; justify-content: center; margin-bottom: 24px; flex-wrap: wrap; }
+    .f-links a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; }
+    .f-links a:hover { color: var(--accent2); }
+    .f-copy { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim); }
+
+    /* ═══ RESPONSIVE ═══ */
+    @media (max-width: 900px) {
+      body { cursor: auto; }
+      .cursor-dot, .cursor-ring { display: none; }
+      .hero-inner { grid-template-columns: 1fr; gap: 48px; }
+      .hero-title { font-size: 56px; }
+      .bento { grid-template-columns: 1fr; } .bento-wide { grid-template-columns: 1fr; }
+      .arch-grid { grid-template-columns: 1fr; } .arch-full { grid-template-columns: 1fr; }
+      .install-grid { grid-template-columns: 1fr; }
+      .steps-grid { grid-template-columns: 1fr; }
+      .wide-visual { display: none; }
+    }
+    @media (max-width: 540px) { .nav-badge { display: none; } .hero { padding-top: 100px; } }
   </style>
 </head>
-<body class="antialiased selection:bg-white selection:text-black min-h-screen flex flex-col">
+<body>
 
-  <!-- Navigation -->
-  <nav class="fixed top-0 w-full z-50 glass-nav transition-all duration-300">
-    <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-      <div class="flex items-center gap-4">
-        <span class="text-white font-extrabold text-2xl tracking-tighter">kaim</span>
-        <div class="w-2 h-2 rounded-full bg-white shadow-[0_0_10px_#fff] animate-pulse"></div>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-ring" id="cring"></div>
+<div class="bg-mesh"></div>
+<div class="bg-grid"></div>
+<canvas id="particles" style="position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:0.4"></canvas>
+
+<!-- NAV -->
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">kaim <span class="nav-dot"></span></a>
+    <div class="nav-right">
+      <div class="nav-badge" id="nav-badge-wrap">latest: <strong id="nav-ver">—</strong></div>
+      <a href="https://github.com/sdwird/kaim" target="_blank" rel="noopener" class="nav-gh">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.341-3.369-1.341-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+        GitHub
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-text">
+      <div class="hero-pill"><span class="dot"></span>Lua · Roblox · PC Only</div>
+      <h1 class="hero-title"><span class="grad">kaim</span><br>obsidian.</h1>
+      <p class="hero-sub">The ultimate precision aimbot script. Zero-latency engine, stunning Obsidian UI, and deep optimizations that push Roblox executors to their absolute limits.</p>
+      <div class="hero-actions">
+        <a href="#install" class="btn-primary">Get Loadstring ↓</a>
+        <a href="#arch" class="btn-secondary">Engine Architecture →</a>
       </div>
-      <div class="flex items-center gap-6">
-        <div class="hidden sm:flex items-center gap-2 text-xs font-mono text-zinc-500 bg-obsidian-card border border-obsidian-border px-4 py-2 rounded-md">
-          <span id="nav-latest-ver">v10.1</span> <span class="text-white font-semibold">OBSIDIAN BUILD</span>
-        </div>
-        <a href="https://github.com/sdwird/kaim" target="_blank" class="text-sm font-medium text-zinc-400 hover:text-white transition-colors flex items-center gap-2">
-          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .08 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z" clip-rule="evenodd"></path></svg>
-          GitHub
-        </a>
+      <div class="hero-stats">
+        <div class="stat"><div class="stat-num" id="s-stars">—</div><div class="stat-label">Stars</div></div>
+        <div class="stat-div"></div>
+        <div class="stat"><div class="stat-num" id="s-forks">—</div><div class="stat-label">Forks</div></div>
+        <div class="stat-div"></div>
+        <div class="stat"><div class="stat-num" id="s-vers">—</div><div class="stat-label">Versions</div></div>
       </div>
     </div>
-  </nav>
 
-  <!-- Hero & UI Showcase -->
-  <main class="relative flex-1 pt-32 pb-24 overflow-hidden">
-    <!-- Grid Background -->
-    <div class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:64px_64px] pointer-events-none -z-10 [mask-image:radial-gradient(ellipse_60%_60%_at_50%_40%,#000_10%,transparent_100%)]"></div>
-    
-    <div class="max-w-7xl mx-auto px-6 grid xl:grid-cols-2 gap-16 items-center">
-      
-      <!-- Left Column: Copy -->
-      <div class="flex flex-col items-start text-left z-10 reveal">
-        <div class="inline-flex items-center gap-2 font-mono text-xs tracking-widest uppercase text-zinc-400 mb-8 border border-obsidian-border bg-[rgba(255,255,255,0.02)] px-5 py-2.5 rounded-full shadow-lg">
-          <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></div>
-          Lua / PC Only
-        </div>
-        
-        <h1 class="text-7xl sm:text-8xl lg:text-[7rem] font-extrabold text-white tracking-tighter leading-[0.95] mb-8">
-          kaim<br>
-          <span class="text-transparent bg-clip-text bg-gradient-to-br from-zinc-100 via-zinc-400 to-zinc-700">obsidian.</span>
-        </h1>
-        
-        <p class="text-xl text-zinc-400 max-w-lg mb-12 leading-relaxed">
-          The ultimate precision aimbot script, fully rebuilt on the sleek and modern Obsidian UI library. Experience zero-latency performance with a stunning interface.
-        </p>
-        
-        <div class="flex flex-wrap gap-4">
-          <a href="#install" class="px-8 py-4 bg-white text-black font-semibold rounded-lg shadow-[0_0_20px_rgba(255,255,255,0.15)] hover:shadow-[0_0_35px_rgba(255,255,255,0.3)] hover:-translate-y-1 transition-all duration-300">
-            Get Loadstrings
-          </a>
-          <a href="#docs" class="px-8 py-4 bg-obsidian-surface border border-obsidian-border text-white font-medium rounded-lg hover:bg-white/5 hover:border-zinc-500 transition-all duration-300">
-            View Engine Specs
-          </a>
-        </div>
-      </div>
-      
-      <!-- Right Column: Interactive Obsidian UI Component -->
-      <div class="relative group mx-auto w-full max-w-[600px] xl:max-w-none reveal reveal-delay-1">
-        <!-- Glow effect behind widget -->
-        <div class="absolute -inset-2 bg-gradient-to-b from-white/10 to-transparent blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none rounded-2xl"></div>
-        
-        <!-- Web Component Container -->
-        <div class="relative rounded-[14px] overflow-hidden border border-obsidian-border bg-[#0a0a0a] shadow-2xl h-[520px] transition-transform duration-500 group-hover:scale-[1.01]">
-          
-          <!-- OBSIDIAN WIDGET WITH EMBEDDED JSON -->
-          <Obsidian
-            title="kaim"
-            footer="version: 10.1 (Stable)"
-            icon="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/GitHub_Invertocat_Logo.svg/1200px-GitHub_Invertocat_Logo.svg.png">
-            
-            <script type="application/json">
-              {
-                "tabs": {
-                  "Combat": {
-                    "order": 1,
-                    "groups": [
-                      {
-                        "name": "Target Lock",
-                        "order": 1,
-                        "side": "left",
-                        "elements": [
-                          { "type": "Toggle", "title": "Enable Aimbot", "state": true, "callback_index": -1 },
-                          { "type": "Dropdown", "title": "Aim Mode", "value": "Smart", "options": ["Smart", "Closest Part"], "callback_index": -1 },
-                          { "type": "Dropdown", "title": "Target Priority", "value": "Crosshair", "options": ["Crosshair", "Distance", "Health"], "callback_index": -1 },
-                          { "type": "Toggle", "title": "Team Check", "state": true, "callback_index": -1 },
-                          { "type": "Toggle", "title": "Wall Check", "state": true, "callback_index": -1 }
-                        ]
-                      },
-                      {
-                        "name": "Accuracy",
-                        "order": 2,
-                        "side": "right",
-                        "elements": [
-                          { "type": "Slider", "title": "Hit Chance", "value": 100, "min": 0, "max": 100, "callback_index": -1 },
-                          { "type": "Toggle", "title": "Prediction", "state": true, "callback_index": -1 },
-                          { "type": "Slider", "title": "Prediction Strength", "value": 0.135, "min": 0.1, "max": 0.2, "callback_index": -1 }
-                        ]
-                      },
-                      {
-                        "name": "Hitbox Expander",
-                        "order": 3,
-                        "side": "left",
-                        "elements": [
-                          { "type": "Toggle", "title": "Enable Hitboxes", "state": false, "callback_index": -1 },
-                          { "type": "Slider", "title": "Size", "value": 5, "min": 1, "max": 50, "callback_index": -1 }
-                        ]
-                      }
-                    ]
-                  },
-                  "Visuals": {
-                    "order": 2,
-                    "groups": [
-                      {
-                        "name": "Target HUD",
-                        "order": 1,
-                        "side": "left",
-                        "elements": [
-                          { "type": "Toggle", "title": "Show Target HUD", "state": true, "callback_index": -1 },
-                          { "type": "Dropdown", "title": "HUD Style", "value": "Premium", "options": ["Premium", "Competitive", "Compact", "Minimalist"], "callback_index": -1 },
-                          { "type": "Slider", "title": "HUD Scale", "value": 1, "min": 0.5, "max": 1.5, "callback_index": -1 }
-                        ]
-                      },
-                      {
-                        "name": "ESP Elements",
-                        "order": 2,
-                        "side": "right",
-                        "elements": [
-                          { "type": "Toggle", "title": "Enable ESP", "state": true, "callback_index": -1 },
-                          { "type": "Toggle", "title": "Show Boxes", "state": true, "callback_index": -1 },
-                          { "type": "Toggle", "title": "Health Bar", "state": true, "callback_index": -1 },
-                          { "type": "Toggle", "title": "Names", "state": true, "callback_index": -1 }
-                        ]
-                      }
-                    ]
-                  },
-                  "Movement": {
-                    "order": 3,
-                    "groups": [
-                      {
-                        "name": "Mobility & Defense",
-                        "order": 1,
-                        "side": "left",
-                        "elements": [
-                          { "type": "Toggle", "title": "Enable Blink to Target", "state": false, "callback_index": -1 },
-                          { "type": "Toggle", "title": "Spinbot (Anti-Aim)", "state": false, "callback_index": -1 },
-                          { "type": "Slider", "title": "Spin Speed", "value": 20, "min": 1, "max": 100, "callback_index": -1 }
-                        ]
-                      }
-                    ]
-                  }
+    <div class="hero-widget-wrap">
+      <div class="hero-widget-glow"></div>
+      <div class="hero-widget">
+        <Obsidian
+          title="kaim"
+          footer="version: 10.1 (Stable)"
+          icon="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/GitHub_Invertocat_Logo.svg/1200px-GitHub_Invertocat_Logo.svg.png">
+          <script type="application/json">
+            {
+              "tabs": {
+                "Combat": {
+                  "order": 1,
+                  "groups": [
+                    {
+                      "name": "Target Lock",
+                      "order": 1, "side": "left",
+                      "elements": [
+                        { "type": "Toggle", "title": "Enable Aimbot", "state": true, "callback_index": -1 },
+                        { "type": "Dropdown", "title": "Aim Mode", "value": "Smart", "options": ["Smart", "Closest Part"], "callback_index": -1 },
+                        { "type": "Dropdown", "title": "Target Priority", "value": "Crosshair", "options": ["Crosshair", "Distance", "Health"], "callback_index": -1 },
+                        { "type": "Toggle", "title": "Team Check", "state": true, "callback_index": -1 },
+                        { "type": "Toggle", "title": "Wall Check", "state": true, "callback_index": -1 },
+                        { "type": "Toggle", "title": "ESP Targets Only", "state": false, "callback_index": -1 },
+                        { "type": "Toggle", "title": "Sound Cue on Lock", "state": true, "callback_index": -1 }
+                      ]
+                    },
+                    {
+                      "name": "Accuracy & Prediction",
+                      "order": 2, "side": "right",
+                      "elements": [
+                        { "type": "Slider", "title": "Hit Chance (%)", "value": 100, "min": 0, "max": 100, "callback_index": -1 },
+                        { "type": "Toggle", "title": "Prediction", "state": true, "callback_index": -1 },
+                        { "type": "Slider", "title": "Prediction Strength", "value": 0.135, "min": 0.05, "max": 0.3, "callback_index": -1 },
+                        { "type": "Toggle", "title": "Smoothing", "state": false, "callback_index": -1 },
+                        { "type": "Slider", "title": "Smooth Speed", "value": 0.3, "min": 0.05, "max": 1, "callback_index": -1 },
+                        { "type": "Slider", "title": "Offset X", "value": 0, "min": -5, "max": 5, "callback_index": -1 },
+                        { "type": "Slider", "title": "Offset Y", "value": 0, "min": -5, "max": 5, "callback_index": -1 }
+                      ]
+                    },
+                    {
+                      "name": "Triggerbot",
+                      "order": 3, "side": "left",
+                      "elements": [
+                        { "type": "Toggle", "title": "Enable Triggerbot", "state": false, "callback_index": -1 },
+                        { "type": "Slider", "title": "Fire Delay (s)", "value": 0.05, "min": 0, "max": 0.5, "callback_index": -1 },
+                        { "type": "Slider", "title": "Trigger Hit Chance (%)", "value": 100, "min": 0, "max": 100, "callback_index": -1 }
+                      ]
+                    },
+                    {
+                      "name": "Hitbox Expander",
+                      "order": 4, "side": "right",
+                      "elements": [
+                        { "type": "Toggle", "title": "Enable Hitboxes", "state": false, "callback_index": -1 },
+                        { "type": "Dropdown", "title": "Target Part", "value": "Head", "options": ["Head", "UpperTorso", "LowerTorso", "HumanoidRootPart"], "callback_index": -1 },
+                        { "type": "Slider", "title": "Hitbox Size", "value": 5, "min": 1, "max": 50, "callback_index": -1 },
+                        { "type": "Slider", "title": "Hitbox Transparency", "value": 0.5, "min": 0, "max": 1, "callback_index": -1 }
+                      ]
+                    }
+                  ]
+                },
+                "Visuals": {
+                  "order": 2,
+                  "groups": [
+                    {
+                      "name": "FOV Circle",
+                      "order": 1, "side": "left",
+                      "elements": [
+                        { "type": "Toggle", "title": "Show FOV Circle", "state": true, "callback_index": -1 },
+                        { "type": "Toggle", "title": "Follow Mouse", "state": true, "callback_index": -1 },
+                        { "type": "Slider", "title": "FOV Radius", "value": 150, "min": 10, "max": 500, "callback_index": -1 },
+                        { "type": "Toggle", "title": "Zoom Scale", "state": true, "callback_index": -1 },
+                        { "type": "Slider", "title": "Thickness", "value": 1.5, "min": 1, "max": 5, "callback_index": -1 },
+                        { "type": "Toggle", "title": "Color Lerp on Lock", "state": true, "callback_index": -1 }
+                      ]
+                    },
+                    {
+                      "name": "Target HUD",
+                      "order": 2, "side": "right",
+                      "elements": [
+                        { "type": "Toggle", "title": "Show Target HUD", "state": true, "callback_index": -1 },
+                        { "type": "Dropdown", "title": "HUD Style", "value": "Top Premium", "options": ["Top Premium", "Bot Competitive", "Top Compact", "Bot Minimalist"], "callback_index": -1 },
+                        { "type": "Slider", "title": "HUD Scale", "value": 1, "min": 0.5, "max": 1.5, "callback_index": -1 }
+                      ]
+                    },
+                    {
+                      "name": "ESP Core",
+                      "order": 3, "side": "left",
+                      "elements": [
+                        { "type": "Toggle", "title": "Enable ESP", "state": false, "callback_index": -1 },
+                        { "type": "Toggle", "title": "Show Boxes", "state": true, "callback_index": -1 },
+                        { "type": "Toggle", "title": "Box Outline", "state": true, "callback_index": -1 },
+                        { "type": "Toggle", "title": "Box Fill", "state": false, "callback_index": -1 },
+                        { "type": "Toggle", "title": "Health Bar", "state": true, "callback_index": -1 },
+                        { "type": "Toggle", "title": "Names", "state": true, "callback_index": -1 },
+                        { "type": "Toggle", "title": "Distance", "state": false, "callback_index": -1 },
+                        { "type": "Toggle", "title": "Weapon", "state": false, "callback_index": -1 }
+                      ]
+                    },
+                    {
+                      "name": "ESP Colors",
+                      "order": 4, "side": "right",
+                      "elements": [
+                        { "type": "Toggle", "title": "Visibility Colors", "state": true, "callback_index": -1 },
+                        { "type": "Toggle", "title": "Team Check", "state": true, "callback_index": -1 },
+                        { "type": "Toggle", "title": "Tracers", "state": false, "callback_index": -1 },
+                        { "type": "Dropdown", "title": "Tracer Origin", "value": "Bottom", "options": ["Bottom", "Center", "Top"], "callback_index": -1 },
+                        { "type": "Dropdown", "title": "Text Case", "value": "UPPERCASE", "options": ["Normal", "UPPERCASE"], "callback_index": -1 },
+                        { "type": "Slider", "title": "Max ESP Distance", "value": 1000, "min": 100, "max": 5000, "callback_index": -1 }
+                      ]
+                    }
+                  ]
+                },
+                "Movement": {
+                  "order": 3,
+                  "groups": [
+                    {
+                      "name": "Player Modifiers",
+                      "order": 1, "side": "left",
+                      "elements": [
+                        { "type": "Toggle", "title": "Speed Hack", "state": false, "callback_index": -1 },
+                        { "type": "Slider", "title": "Walk Speed", "value": 16, "min": 16, "max": 200, "callback_index": -1 },
+                        { "type": "Toggle", "title": "Jump Power Hack", "state": false, "callback_index": -1 },
+                        { "type": "Slider", "title": "Jump Power", "value": 50, "min": 50, "max": 500, "callback_index": -1 },
+                        { "type": "Toggle", "title": "Infinite Jump", "state": false, "callback_index": -1 },
+                        { "type": "Toggle", "title": "Bunny Hop", "state": false, "callback_index": -1 }
+                      ]
+                    },
+                    {
+                      "name": "World & Defense",
+                      "order": 2, "side": "right",
+                      "elements": [
+                        { "type": "Toggle", "title": "Override Lighting", "state": false, "callback_index": -1 },
+                        { "type": "Slider", "title": "Time of Day", "value": 14, "min": 0, "max": 24, "callback_index": -1 },
+                        { "type": "Slider", "title": "Brightness", "value": 2, "min": 0, "max": 5, "callback_index": -1 },
+                        { "type": "Toggle", "title": "Noclip", "state": false, "callback_index": -1 },
+                        { "type": "Toggle", "title": "Spinbot (Anti-Aim)", "state": false, "callback_index": -1 },
+                        { "type": "Slider", "title": "Spin Speed", "value": 20, "min": 1, "max": 100, "callback_index": -1 },
+                        { "type": "Toggle", "title": "Enable Blink to Target", "state": false, "callback_index": -1 }
+                      ]
+                    }
+                  ]
+                },
+                "Config": {
+                  "order": 4,
+                  "groups": [
+                    {
+                      "name": "Performance",
+                      "order": 1, "side": "right",
+                      "elements": [
+                        { "type": "Toggle", "title": "FPS Watermark", "state": true, "callback_index": -1 },
+                        { "type": "Slider", "title": "LOD Distance (m)", "value": 500, "min": 100, "max": 2000, "callback_index": -1 }
+                      ]
+                    }
+                  ]
                 }
               }
-            </script>
-          </Obsidian>
-          
-        </div>
-        
-        <!-- Tooltip Context -->
-        <div class="absolute -bottom-16 left-0 right-0 flex justify-center opacity-75 group-hover:opacity-100 transition-opacity">
-          <div class="text-xs font-mono text-zinc-400 bg-obsidian-surface border border-obsidian-border px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg">
-            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
-            Interactive web preview powered by embedded JSON layout
-          </div>
-        </div>
+            }
+          </script>
+        </Obsidian>
       </div>
-      
+      <div class="widget-caption">⚡ Interactive — click tabs and toggles to explore</div>
     </div>
-  </main>
+  </div>
+</section>
 
-  <!-- Deep Dive Documentation Section -->
-  <section id="docs" class="py-24 border-t border-obsidian-border bg-obsidian-surface">
-    <div class="max-w-6xl mx-auto px-6">
-      <div class="text-center mb-20 reveal">
-        <h2 class="text-4xl font-extrabold text-white mb-6">Engine Architecture</h2>
-        <p class="text-lg text-zinc-400 max-w-2xl mx-auto">kaim isn't just an aimbot, it's a meticulously optimized Lua engine built to bypass common execution limits while maintaining flawless frame rates.</p>
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-track" id="ticker-track"></div>
+</div>
+
+<!-- FEATURES -->
+<section class="section" id="features">
+  <div class="section-inner">
+    <div class="sr" style="margin-bottom:48px">
+      <div class="section-label">Features</div>
+      <div class="section-title">Everything you need.<br>Nothing you don't.</div>
+      <div class="section-desc">Built lean, runs fast. Every feature is here for a reason.</div>
+    </div>
+    <div class="bento">
+      <div class="bento-card sr sr-d1">
+        <div class="bento-icon">🎯</div>
+        <h3>Single-Lock Targeting</h3>
+        <p>Once you press your aim key and the script locks onto a valid target, it will never switch to another player as long as you hold that key down. Release and re-press to acquire a new target.</p>
       </div>
-      
-      <div class="grid md:grid-cols-2 gap-8">
-        
-        <!-- Module 1 -->
-        <div class="bg-black border border-obsidian-border p-8 rounded-2xl hover:border-zinc-500 transition-colors reveal reveal-delay-1 relative overflow-hidden group">
-          <div class="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-          <div class="text-emerald-400 mb-6 bg-emerald-400/10 w-14 h-14 rounded-xl flex items-center justify-center font-mono text-xl border border-emerald-400/20">01</div>
-          <h3 class="text-2xl font-bold text-white mb-4">Zero-Bridge Drawing Proxy</h3>
-          <p class="text-zinc-400 leading-relaxed mb-4">
-            Most scripts update the C++ Drawing API (`Drawing.new`) every single frame, causing severe memory bridging latency and inevitable stutters.
-          </p>
-          <p class="text-zinc-500 text-sm border-l-2 border-obsidian-border pl-4">
-            Our custom `ND()` proxy acts as an intermediary. It caches all properties locally in Lua and only dispatches updates to the C++ engine when a value actually changes. <strong>Result: 90% reduction in C++ bridge overhead.</strong>
-          </p>
+      <div class="bento-card sr sr-d2">
+        <div class="bento-icon">⚡</div>
+        <h3>One-Line Activation</h3>
+        <p>A single <code style="font-family:'JetBrains Mono';font-size:12px;color:var(--accent2);background:rgba(99,102,241,0.1);padding:2px 6px;border-radius:4px">loadstring</code> command is all it takes. Paste into any executor and run — zero setup required.</p>
+      </div>
+      <div class="bento-card sr sr-d3">
+        <div class="bento-icon">🛡️</div>
+        <h3>Zero-Bridge Engine</h3>
+        <p>Every Drawing API call is intercepted by a Lua-side proxy cache. The C++ engine is only contacted when a property actually changes, reducing bridge overhead by over 90%.</p>
+      </div>
+      <div class="bento-card bento-wide sr sr-d4">
+        <div>
+          <div class="bento-icon">🔄</div>
+          <h3>Always Up to Date</h3>
+          <p style="font-size:15px;max-width:400px">This page fetches live data from the GitHub API every time it loads. The file tree, version names, and script URLs all update automatically the moment you push a new file.</p>
+          <div class="sync-badge"><div class="sync-spin"></div>Live-synced from sdwird/kaim</div>
         </div>
-
-        <!-- Module 2 -->
-        <div class="bg-black border border-obsidian-border p-8 rounded-2xl hover:border-zinc-500 transition-colors reveal reveal-delay-2 relative overflow-hidden group">
-          <div class="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-          <div class="text-amber-400 mb-6 bg-amber-400/10 w-14 h-14 rounded-xl flex items-center justify-center font-mono text-xl border border-amber-400/20">02</div>
-          <h3 class="text-2xl font-bold text-white mb-4">Raycast Allocation Caching</h3>
-          <p class="text-zinc-400 leading-relaxed mb-4">
-            "Smart Mode" checks up to 6 different body parts per player per frame. Standard aimbots instantiate a new `RaycastParams` filter array for each part, flooding the garbage collector.
-          </p>
-          <p class="text-zinc-500 text-sm border-l-2 border-obsidian-border pl-4">
-            Kaim caches the `FilterDescendantsInstances` array based on the `_lastVisChar`. It reuses the exact same C++ allocation across all body part checks for that character, cutting allocation costs by 6x per player.
-          </p>
+        <div class="wide-visual">
+          <div class="wv-line"><span class="d d-g"></span><span>fetching sdwird/kaim tree…</span></div>
+          <div class="wv-line"><span class="d d-a"></span><span>sorting versions by semver…</span></div>
+          <div class="wv-line"><span class="d d-p"></span><span>latest detected: <em id="wv-ver" style="font-style:normal;color:var(--accent2)">—</em></span></div>
+          <div class="wv-line"><span class="d d-g"></span><span>code blocks updated ✓</span></div>
+          <div class="wv-line"><span class="d d-g"></span><span>file tree rendered ✓</span></div>
         </div>
-
-        <!-- Module 3 -->
-        <div class="bg-black border border-obsidian-border p-8 rounded-2xl hover:border-zinc-500 transition-colors reveal reveal-delay-1 relative overflow-hidden group">
-          <div class="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-          <div class="text-blue-400 mb-6 bg-blue-400/10 w-14 h-14 rounded-xl flex items-center justify-center font-mono text-xl border border-blue-400/20">03</div>
-          <h3 class="text-2xl font-bold text-white mb-4">Dynamic Target HUD</h3>
-          <p class="text-zinc-400 leading-relaxed mb-4">
-            4 unique layouts (Premium, Competitive, Compact, Minimalist). Instead of generating new drawing objects when you swap styles, it securely recycles the exact same 15 drawing objects.
-          </p>
-          <p class="text-zinc-500 text-sm border-l-2 border-obsidian-border pl-4">
-            The HUD leverages the proxy's `__index` fallback to safely query `TextBounds` from the underlying engine, ensuring flawless pixel-perfect right alignment without expensive string-math.
-          </p>
-        </div>
-
-        <!-- Module 4 -->
-        <div class="bg-black border border-obsidian-border p-8 rounded-2xl hover:border-zinc-500 transition-colors reveal reveal-delay-2 relative overflow-hidden group">
-          <div class="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-          <div class="text-purple-400 mb-6 bg-purple-400/10 w-14 h-14 rounded-xl flex items-center justify-center font-mono text-xl border border-purple-400/20">04</div>
-          <h3 class="text-2xl font-bold text-white mb-4">Heartbeat Hitbox Bypass</h3>
-          <p class="text-zinc-400 leading-relaxed mb-4">
-            Nested loops checking thousands of parts on Heartbeat will instantly tank FPS.
-          </p>
-          <p class="text-zinc-500 text-sm border-l-2 border-obsidian-border pl-4">
-            Kaim implements a strict `_hbActive` state flag. When the Hitbox Expander is disabled, the script permanently halts all mathematical operations regarding hitboxes, executing zero code on Heartbeat cycles until you turn it back on.
-          </p>
-        </div>
-
+      </div>
+      <div class="bento-card sr sr-d5">
+        <div class="bento-icon">📦</div>
+        <h3>4 HUD Styles</h3>
+        <p>Premium, Competitive, Compact, or Minimalist. All styles share the same 15 drawing objects — zero garbage collection stutter from style switching.</p>
+      </div>
+      <div class="bento-card sr sr-d6">
+        <div class="bento-icon">🔀</div>
+        <h3>Stable & Experimental</h3>
+        <p>Two release tracks. The stable build for reliability, the experimental build for cutting-edge updates. Both auto-detected from GitHub.</p>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- Live GitHub Install Section -->
-  <section id="install" class="py-24 relative overflow-hidden">
-    <div class="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-obsidian-border to-transparent"></div>
-    <div class="max-w-6xl mx-auto px-6 text-center reveal">
-      <h2 class="text-4xl font-extrabold text-white mb-4">Get the Script</h2>
-      <p class="text-zinc-400 mb-16 max-w-xl mx-auto flex items-center justify-center gap-3">
-        <span class="relative flex h-3 w-3">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-        </span>
-        Live synced with GitHub API. Always current.
-      </p>
-      
-      <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto text-left">
-        <!-- Stable Build Box -->
-        <div class="group relative bg-obsidian-surface border border-obsidian-border p-8 rounded-2xl hover:border-zinc-500 transition-colors">
-          <div class="flex justify-between items-start mb-6">
-            <div>
-              <h3 class="text-2xl font-bold text-white">Stable Release</h3>
-              <p class="text-zinc-400 text-sm mt-2">Reliable, tested, highly optimized for competitive play.</p>
-            </div>
-            <span id="badge-stable" class="text-xs font-bold font-mono tracking-widest text-emerald-400 bg-emerald-400/10 px-3 py-1.5 rounded-md border border-emerald-400/20">LOADING...</span>
-          </div>
-          <div class="bg-black p-5 rounded-xl border border-obsidian-border font-mono text-sm text-zinc-300 break-all mb-6 shadow-inner">
-            <span class="text-purple-400">loadstring</span>(<span class="text-blue-400">game</span>:<span class="text-emerald-400">HttpGet</span>(<span class="text-white">"<span id="url-stable">fetching...</span>"</span>))()
-          </div>
-          <button id="btn-stable" class="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white font-medium transition-colors">
-            Copy Loadstring
-          </button>
+<!-- TERMINAL -->
+<section class="section" id="terminal" style="padding-top:0">
+  <div class="section-inner sr">
+    <div style="margin-bottom:48px">
+      <div class="section-label">In Action</div>
+      <div class="section-title">Watch it load</div>
+      <div class="section-desc">What happens when you execute kaim in your executor.</div>
+    </div>
+    <div class="terminal">
+      <div class="term-bar">
+        <div class="term-dots"><i class="td-r"></i><i class="td-y"></i><i class="td-g"></i></div>
+        <span class="term-title">kaim executor — Lua 5.1</span>
+        <div style="width:40px"></div>
+      </div>
+      <div class="term-body" id="term-body"><span class="t-cursor"></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section class="section" id="arch" style="background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="section-inner">
+    <div class="sr" style="margin-bottom:48px;text-align:center">
+      <div class="section-label" style="justify-content:center">Engine Architecture</div>
+      <div class="section-title">Built for Performance</div>
+      <div class="section-desc" style="margin:14px auto 0">kaim isn't just an aimbot. It's a meticulously optimized Lua engine built to bypass common execution limits while maintaining flawless frame rates.</div>
+    </div>
+    <div class="arch-grid">
+
+      <div class="arch-card sr sr-d1">
+        <div class="arch-num" style="color:#22c55e;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2)">01</div>
+        <h3>Zero-Bridge Drawing Proxy</h3>
+        <p>Most scripts update the C++ Drawing API every single frame, causing severe memory bridging latency and inevitable micro-stutters that compound during intense fights.</p>
+        <div class="arch-detail">The custom <strong>ND()</strong> proxy caches all properties locally in a Lua table. On each <strong>__newindex</strong> call, it compares the new value against the cached one. Only when they differ does it dispatch the update across the Lua→C++ bridge. This eliminates <strong>90%+ of redundant bridge calls</strong>, keeping frame times rock-solid even with 20+ ESP objects on screen.</div>
+      </div>
+
+      <div class="arch-card sr sr-d2">
+        <div class="arch-num" style="color:#f59e0b;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2)">02</div>
+        <h3>Raycast Allocation Caching</h3>
+        <p>"Smart Mode" checks up to 6 different body parts per player per frame. Standard aimbots instantiate a new filter array for each check, flooding the garbage collector.</p>
+        <div class="arch-detail">Kaim caches the <strong>FilterDescendantsInstances</strong> array via a <strong>_lastVisChar</strong> reference. If the current character matches the last one checked, the script reuses the identical C++ allocation across all 6 body part raycasts. This cuts allocation costs by <strong>6x per player per frame</strong> and drastically reduces GC pressure.</div>
+      </div>
+
+      <div class="arch-card sr sr-d3">
+        <div class="arch-num" style="color:#6366f1;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2)">03</div>
+        <h3>Global Descendant Pre-Pass</h3>
+        <p>To prevent crashes when a player dies, the script checks if their character still exists in the workspace. Standard scripts do this check separately in ESP, Aiming, and HUD code.</p>
+        <div class="arch-detail">Kaim runs <strong>IsDescendantOf(workspace)</strong> exactly <strong>once per player per frame</strong> during the pre-computation loop. The boolean result is cached to <strong>cd._wsValid</strong> and consumed by all downstream systems. This halves the overhead of workspace verification across the entire pipeline.</div>
+      </div>
+
+      <div class="arch-card sr sr-d4">
+        <div class="arch-num" style="color:#ec4899;background:rgba(236,72,153,0.1);border:1px solid rgba(236,72,153,0.2)">04</div>
+        <h3>Heartbeat Hitbox Bypass</h3>
+        <p>Nested loops checking thousands of parts on Heartbeat will instantly tank your FPS. Even when the hitbox expander is off, most scripts still iterate every frame.</p>
+        <div class="arch-detail">Kaim implements a strict <strong>_hbActive</strong> state flag. When the Hitbox Expander is disabled and all parts have been restored, the script permanently halts all hitbox math on Heartbeat. It executes <strong>zero code</strong> per physics tick until you explicitly re-enable the feature — saving precious CPU budget for other systems.</div>
+      </div>
+
+      <div class="arch-card arch-full sr sr-d5">
+        <div>
+          <div class="arch-num" style="color:#22d3ee;background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.2)">05</div>
+          <h3>Dynamic Target HUD Engine</h3>
+          <p>4 unique layouts (Premium, Competitive, Compact, Minimalist) that feel completely different but share one unified rendering engine underneath.</p>
+          <div class="arch-detail">Instead of creating/destroying drawing objects when swapping styles, the HUD recycles the <strong>exact same 15 drawing objects</strong>. Unused elements are hidden through the proxy's visibility flag rather than deleted, guaranteeing <strong>zero GC stutter</strong> during live style switches. The proxy's <strong>__index fallback</strong> safely queries C++ properties like <strong>TextBounds</strong> for pixel-perfect right-alignment without expensive string math.</div>
         </div>
-
-        <!-- Experimental Build Box -->
-        <div class="group relative bg-obsidian-surface border border-obsidian-border p-8 rounded-2xl hover:border-white transition-all duration-300">
-          <div class="absolute -inset-0.5 bg-gradient-to-b from-white/20 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity -z-10 blur-md"></div>
-          
-          <div class="flex justify-between items-start mb-6">
-            <div>
-              <h3 class="text-2xl font-bold text-white">Experimental</h3>
-              <p class="text-zinc-400 text-sm mt-2">Latest pushed code, cutting-edge features.</p>
-            </div>
-            <span id="badge-exp" class="text-xs font-bold font-mono tracking-widest text-amber-400 bg-amber-400/10 px-3 py-1.5 rounded-md border border-amber-400/20">LOADING...</span>
-          </div>
-          <div class="bg-black p-5 rounded-xl border border-obsidian-border font-mono text-sm text-zinc-300 break-all mb-6 shadow-inner">
-            <span class="text-purple-400">loadstring</span>(<span class="text-blue-400">game</span>:<span class="text-emerald-400">HttpGet</span>(<span class="text-white">"<span id="url-exp">fetching...</span>"</span>))()
-          </div>
-          <button id="btn-exp" class="w-full py-4 bg-white text-black font-semibold rounded-xl hover:bg-zinc-200 transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)]">
-            Copy Loadstring
-          </button>
+        <div class="arch-code">
+          <span class="cm">-- Zero-Bridge Proxy Core</span><br>
+          <span class="kw">local function</span> <span class="fn">ND</span>(t)<br>
+          &nbsp;&nbsp;<span class="kw">local</span> obj = Drawing.new(t)<br>
+          &nbsp;&nbsp;<span class="kw">local</span> cache = {<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;Visible = <span class="kw">false</span>,<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;Color = Color3.new(),<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;Size = <span class="num">12</span>,<br>
+          &nbsp;&nbsp;}<br>
+          &nbsp;&nbsp;<span class="kw">return</span> setmetatable({}, {<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;__newindex = <span class="kw">function</span>(_, k, v)<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> cache[k] ~= v <span class="kw">then</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cache[k] = v<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;obj[k] = v  <span class="cm">-- bridge call</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">end</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">end</span>,<br>
+          &nbsp;&nbsp;})<br>
+          <span class="kw">end</span>
         </div>
       </div>
+
     </div>
-  </section>
+  </div>
+</section>
 
-  <footer class="border-t border-obsidian-border mt-auto py-12 text-center bg-black">
-    <p class="text-zinc-600 text-sm font-mono tracking-wide">kaim &copy; 2026. Built with Obsidian UI.</p>
-  </footer>
+<!-- INSTALL -->
+<section class="section" id="install">
+  <div class="section-inner">
+    <div class="sr" style="text-align:center;margin-bottom:48px">
+      <div class="section-label" style="justify-content:center">Get the Script</div>
+      <div class="section-title">Choose Your Build</div>
+      <div class="section-desc" style="margin:14px auto 0;display:flex;align-items:center;justify-content:center;gap:10px">
+        <span style="position:relative;display:flex;width:10px;height:10px"><span style="animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;position:absolute;inset:0;border-radius:50%;background:var(--green);opacity:0.6"></span><span style="position:relative;display:block;width:10px;height:10px;border-radius:50%;background:var(--green)"></span></span>
+        Live-synced from GitHub. Always current.
+      </div>
+    </div>
+    <div class="install-grid">
+      <!-- Experimental -->
+      <div class="install-card featured sr sr-d1">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+          <div>
+            <h3 style="font-size:22px;font-weight:700;color:#fff;margin-bottom:6px">Experimental</h3>
+            <p style="font-size:14px;color:var(--muted)">Latest features and modules.</p>
+          </div>
+          <span class="install-badge" id="exp-badge" style="color:var(--accent2);background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.2)">—</span>
+        </div>
+        <div class="install-code"><span class="fn">loadstring</span>(<span class="kw">game</span>:<span class="fn">HttpGet</span>(<span class="st" id="exp-url">"fetching..."</span>))()</div>
+        <button class="install-btn install-btn-primary" id="btn-exp">Copy Loadstring</button>
+      </div>
+      <!-- Stable -->
+      <div class="install-card sr sr-d2">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+          <div>
+            <h3 style="font-size:22px;font-weight:700;color:#fff;margin-bottom:6px">Stable</h3>
+            <p style="font-size:14px;color:var(--muted)">Tested and reliable for competitive play.</p>
+          </div>
+          <span class="install-badge" id="stable-badge" style="color:var(--green);background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.18)">—</span>
+        </div>
+        <div class="install-code"><span class="fn">loadstring</span>(<span class="kw">game</span>:<span class="fn">HttpGet</span>(<span class="st" id="stable-url">"fetching..."</span>))()</div>
+        <button class="install-btn install-btn-ghost" id="btn-stable">Copy Loadstring</button>
+      </div>
+    </div>
+  </div>
+</section>
 
-  <script>
-    // Scroll Reveal Intersection Observer
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('active');
-          // Optional: Stop observing once revealed
-          // observer.unobserve(entry.target); 
+<!-- STEPS -->
+<section class="section" style="padding-top:0">
+  <div class="section-inner">
+    <div class="sr" style="margin-bottom:48px">
+      <div class="section-label">How to Run</div>
+      <div class="section-title">Three steps to activate</div>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card sr sr-d1">
+        <div class="step-num">01</div>
+        <h4>Open your executor</h4>
+        <p>Launch any compatible Lua executor on your PC. Mobile is not supported.</p>
+      </div>
+      <div class="step-card sr sr-d2">
+        <div class="step-num">02</div>
+        <h4>Choose a release</h4>
+        <p>Grab the Stable build for reliability or Experimental for the latest features above.</p>
+      </div>
+      <div class="step-card sr sr-d3">
+        <div class="step-num">03</div>
+        <h4>Paste & execute</h4>
+        <p>Paste the <code>loadstring</code> into your executor and run. The aimbot activates automatically.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="f-logo">kaim</div>
+  <div class="f-links">
+    <a href="https://github.com/sdwird/kaim" target="_blank">GitHub</a>
+    <a href="https://github.com/sdwird" target="_blank">sdwird</a>
+    <a href="#install">Get Script</a>
+    <a href="#" onclick="scrollTo({top:0,behavior:'smooth'});return false">↑ Top</a>
+  </div>
+  <div class="f-copy">sdwird/kaim · Lua aimbot · PC only · live from GitHub</div>
+</footer>
+
+<style>@keyframes ping{75%,100%{transform:scale(2);opacity:0}}</style>
+
+<script>
+/* ═══ CURSOR ═══ */
+const cdot = document.getElementById('cdot'), cring = document.getElementById('cring');
+let mx = 0, my = 0, rx = 0, ry = 0;
+document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+(function cursorLoop() {
+  cdot.style.left = mx + 'px'; cdot.style.top = my + 'px';
+  rx += (mx - rx) * 0.1; ry += (my - ry) * 0.1;
+  cring.style.left = rx + 'px'; cring.style.top = ry + 'px';
+  requestAnimationFrame(cursorLoop);
+})();
+document.querySelectorAll('a,button,.bento-card,.step-card,.arch-card,.install-card').forEach(el => {
+  el.addEventListener('mouseenter', () => document.body.classList.add('cursor-hover'));
+  el.addEventListener('mouseleave', () => document.body.classList.remove('cursor-hover'));
+});
+
+/* ═══ PARTICLES ═══ */
+(function() {
+  const cv = document.getElementById('particles'), cx = cv.getContext('2d');
+  let W, H, pts = [];
+  function resize() { W = cv.width = innerWidth; H = cv.height = innerHeight; }
+  function make() { return { x: Math.random()*W, y: Math.random()*H, vx: (Math.random()-.5)*.3, vy: (Math.random()-.5)*.3, r: Math.random()*1.4+.4, a: Math.random()*.25+.05 }; }
+  function draw() {
+    cx.clearRect(0, 0, W, H);
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i];
+      a.x += a.vx; a.y += a.vy;
+      if (a.x < 0 || a.x > W) a.vx *= -1;
+      if (a.y < 0 || a.y > H) a.vy *= -1;
+      cx.beginPath(); cx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
+      cx.fillStyle = `rgba(99,102,241,${a.a})`; cx.fill();
+      for (let j = i + 1; j < pts.length; j++) {
+        const b = pts[j], dx = a.x - b.x, dy = a.y - b.y, d = dx*dx + dy*dy;
+        if (d < 14000) {
+          cx.beginPath(); cx.moveTo(a.x, a.y); cx.lineTo(b.x, b.y);
+          cx.strokeStyle = `rgba(99,102,241,${.08*(1-d/14000)})`; cx.lineWidth = .5; cx.stroke();
         }
-      });
-    }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
-
-    document.querySelectorAll('.reveal').forEach((el) => {
-      observer.observe(el);
-    });
-
-    // GitHub API Fetcher
-    async function fetchGitHubReleases() {
-      const owner = 'sdwird';
-      const repo = 'kaim';
-      const rawBase = `https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/main/`;
-      const apiURL = `https://api.github.com/repos/${owner}/${repo}/git/trees/main?recursive=1`;
-      
-      try {
-        const response = await fetch(apiURL);
-        if (!response.ok) throw new Error("API Limit or Repo missing");
-        const data = await response.json();
-        
-        // Find all Lua files matching kaim-vX.X.lua
-        const files = data.tree.filter(f => f.type === 'blob').map(f => f.path);
-        const vers = files.filter(f => /^kaim-v[\d.]+\.lua$/.test(f));
-        
-        // Sort by Semantic Version (e.g. v10.2 > v10.1 > v8.2)
-        vers.sort((a, b) => {
-          const parse = n => {
-            const m = n.match(/kaim-v(\d+)[._]?(\d*)/);
-            if (!m) return 0;
-            return parseInt(m[1]) * 100 + (m[2] ? parseInt(m[2]) : 0);
-          };
-          return parse(b) - parse(a);
-        });
-
-        // Determine Experimental (Latest) and Stable (Second Latest)
-        const expScript = vers[0] || 'kaim-v10.2.lua';
-        const stableScript = vers[1] || 'kaim-v10.1.lua';
-
-        // Update UI
-        document.getElementById('nav-latest-ver').textContent = expScript.replace('kaim-', '').replace('.lua', '');
-        document.getElementById('badge-exp').textContent = expScript.replace('kaim-', '').replace('.lua', '');
-        document.getElementById('badge-stable').textContent = stableScript.replace('kaim-', '').replace('.lua', '');
-        
-        const expUrl = rawBase + expScript;
-        const stableUrl = rawBase + stableScript;
-
-        document.getElementById('url-exp').textContent = expUrl;
-        document.getElementById('url-stable').textContent = stableUrl;
-
-        // Setup Copy Buttons
-        const setupCopy = (btnId, urlText) => {
-          const btn = document.getElementById(btnId);
-          btn.onclick = () => {
-            navigator.clipboard.writeText(`loadstring(game:HttpGet("${urlText}"))()`);
-            const orig = btn.innerText;
-            btn.innerText = "Copied to Clipboard!";
-            btn.classList.add("bg-emerald-500", "text-white", "border-emerald-500");
-            btn.classList.remove("bg-white", "text-black");
-            setTimeout(() => {
-              btn.innerText = orig;
-              btn.classList.remove("bg-emerald-500", "text-white", "border-emerald-500");
-              if (btnId === 'btn-exp') btn.classList.add("bg-white", "text-black");
-            }, 2500);
-          };
-        };
-
-        setupCopy('btn-exp', expUrl);
-        setupCopy('btn-stable', stableUrl);
-
-      } catch (err) {
-        console.warn("GitHub API error (Rate limit?), falling back to defaults", err);
-        // Fallback defaults
-        document.getElementById('url-exp').textContent = rawBase + "kaim-v10.2.lua";
-        document.getElementById('url-stable').textContent = rawBase + "kaim-v10.1.lua";
-        document.getElementById('badge-exp').textContent = "v10.2";
-        document.getElementById('badge-stable').textContent = "v10.1";
       }
     }
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize', resize); resize();
+  pts = Array.from({ length: 55 }, make); draw();
+})();
 
-    // Initialize API Fetch
-    fetchGitHubReleases();
-  </script>
+/* ═══ NAV SCROLL ═══ */
+window.addEventListener('scroll', () => document.getElementById('nav').classList.toggle('scrolled', scrollY > 40));
+
+/* ═══ SCROLL REVEAL ═══ */
+const srObs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+document.querySelectorAll('.sr').forEach(el => srObs.observe(el));
+
+/* ═══ COUNT UP ═══ */
+function countUp(el, val, dur = 1200) {
+  if (!el || val <= 0) { if (el) el.textContent = val; return; }
+  const start = Date.now();
+  (function frame() {
+    const t = Math.min((Date.now() - start) / dur, 1);
+    el.textContent = Math.round((1 - Math.pow(1 - t, 3)) * val);
+    if (t < 1) requestAnimationFrame(frame);
+  })();
+}
+
+/* ═══ TERMINAL ANIMATION ═══ */
+const termLines = [
+  { p: '$', c: 'cmd', t: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-v10.1.lua"))()' },
+  { p: '»', c: 'info', t: 'Connecting to raw.githubusercontent.com…' },
+  { p: '»', c: 'info', t: 'Fetching kaim-v10.1.lua…' },
+  { p: '»', c: 'info', t: 'Script downloaded  (78.8 KB)' },
+  { p: '»', c: 'ok', t: '[KAIM v10.1] Loading Obsidian Library…' },
+  { p: '»', c: 'ok', t: '[KAIM v10.1] Zero-Bridge Proxy: ACTIVE' },
+  { p: '»', c: 'ok', t: '[KAIM v10.1] ESP Engine: STANDBY' },
+  { p: '»', c: 'ok', t: '[KAIM v10.1] Aimbot: READY ●' },
+];
+const termDelays = [0, 700, 1200, 1800, 2500, 3100, 3600, 4100];
+let termStarted = false;
+const termObs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting && !termStarted) {
+      termStarted = true;
+      const body = document.getElementById('term-body');
+      body.innerHTML = '';
+      termLines.forEach((l, i) => {
+        setTimeout(() => {
+          const prev = body.querySelectorAll('.term-line');
+          prev.forEach(p => p.style.opacity = '1');
+          const cur = body.querySelector('.t-cursor');
+          if (cur) cur.remove();
+          const row = document.createElement('div');
+          row.className = 'term-line';
+          const cc = l.c === 'cmd' ? 't-cmd' : l.c === 'ok' ? 't-ok' : 't-info';
+          row.innerHTML = `<span class="t-prompt">${l.p}</span><span class="${cc}">${l.t}</span>`;
+          body.appendChild(row);
+          if (i < termLines.length - 1) {
+            const cursor = document.createElement('span');
+            cursor.className = 't-cursor';
+            body.appendChild(cursor);
+          }
+        }, termDelays[i]);
+      });
+    }
+  });
+}, { threshold: 0.3 });
+const termEl = document.querySelector('#terminal');
+if (termEl) termObs.observe(termEl);
+
+/* ═══ TICKER ═══ */
+function buildTicker(vers) {
+  const extras = ['Lua 5.1', 'PC Only', 'Roblox', 'Free & Open', 'sdwird/kaim', 'Auto-Updated', 'Obsidian UI', 'Zero-Bridge Engine'];
+  const all = [...vers.map(v => v.replace('.lua', '')), ...extras];
+  document.getElementById('ticker-track').innerHTML = [...all, ...all].map(x =>
+    `<span class="ticker-item"><span class="ticker-dot"></span>${x}</span>`
+  ).join('');
+}
+
+/* ═══ VERSION PARSER ═══ */
+function verScore(n) {
+  const m = n.match(/kaim-v(\d+)[._]?(\d*)/);
+  if (!m) return 0;
+  return parseInt(m[1]) * 100 + (m[2] ? parseInt(m[2]) : 0);
+}
+
+/* ═══ GITHUB API ═══ */
+const OWNER = 'sdwird', REPO = 'kaim';
+const RAW_BASE = `https://raw.githubusercontent.com/${OWNER}/${REPO}/refs/heads/main/`;
+
+async function loadGitHub() {
+  // Repo stats
+  try {
+    const r = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}`);
+    if (r.ok) {
+      const d = await r.json();
+      countUp(document.getElementById('s-stars'), d.stargazers_count || 0);
+      countUp(document.getElementById('s-forks'), d.forks_count || 0);
+    }
+  } catch (_) {}
+
+  // File tree
+  let files = [];
+  const fallback = ['kaim-v10.2.lua', 'kaim-v10.1.lua', 'kaim-v8.8.lua', 'kaim-v8.2.lua'];
+  try {
+    const r = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/trees/main?recursive=1`);
+    if (!r.ok) throw 0;
+    const d = await r.json();
+    files = d.tree.filter(f => f.type === 'blob').map(f => f.path);
+  } catch (_) { files = fallback; }
+
+  // Version detection
+  const vers = files.filter(f => /^kaim-v[\d.]+\.lua$/.test(f)).sort((a, b) => verScore(b) - verScore(a));
+  const exp = vers[0] || 'kaim-v10.2.lua';
+  const stable = vers[1] || 'kaim-v10.1.lua';
+
+  const expUrl = RAW_BASE + exp;
+  const stableUrl = RAW_BASE + stable;
+  const expVer = exp.replace('kaim-', '').replace('.lua', '');
+  const stableVer = stable.replace('kaim-', '').replace('.lua', '');
+
+  // Update nav
+  document.getElementById('nav-ver').textContent = expVer;
+  const wvEl = document.getElementById('wv-ver');
+  if (wvEl) wvEl.textContent = exp.replace('.lua', '');
+
+  // Update install cards
+  document.getElementById('exp-badge').textContent = expVer;
+  document.getElementById('stable-badge').textContent = stableVer;
+  document.getElementById('exp-url').textContent = `"${expUrl}"`;
+  document.getElementById('stable-url').textContent = `"${stableUrl}"`;
+
+  // Stats
+  countUp(document.getElementById('s-vers'), vers.length || 9);
+
+  // Copy buttons
+  function setupCopy(btnId, url) {
+    const btn = document.getElementById(btnId);
+    btn.addEventListener('click', () => {
+      navigator.clipboard.writeText(`loadstring(game:HttpGet("${url}"))()`);
+      btn.textContent = '✓ Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy Loadstring'; btn.classList.remove('copied'); }, 2500);
+    });
+  }
+  setupCopy('btn-exp', expUrl);
+  setupCopy('btn-stable', stableUrl);
+
+  // Ticker
+  buildTicker(vers.length ? vers : fallback);
+}
+
+loadGitHub();
+</script>
 </body>
 </html>
