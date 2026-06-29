@@ -3,471 +3,284 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <meta name="description" content="kaim — Precision aimbot script for Roblox. Built on Obsidian UI."/>
+  <meta name="description" content="kaim — Precision aimbot script for Roblox. Built on Obsidian UI. Zero-latency engine."/>
   <title>kaim — Obsidian</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-
-  <!-- Tailwind -->
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  <!-- Obsidian Widget -->
   <script src="https://www.mspaint.cc/widgets/obsidian.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+:root{
+  --bg:#020204;--s1:#07070e;--s2:#0b0b16;--card:#0e0e1a;--card2:#12121f;
+  --b1:#1a1a2e;--b2:#262640;--b3:#333355;
+  --text:#e8e8f4;--muted:#7a7a9e;--dim:#484868;--faint:#2e2e4a;
+  --accent:#6d5bef;--accent2:#8b7cf8;--accent3:#a99ffc;--accent-g:rgba(109,91,239,.35);
+  --green:#22c55e;--amber:#f59e0b;--red:#ef4444;--cyan:#22d3ee;--pink:#ec4899;
+}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;overflow-x:hidden;line-height:1.65;cursor:none}
 
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
+/* ═══ NOISE OVERLAY ═══ */
+body::after{content:'';position:fixed;inset:0;z-index:9998;pointer-events:none;opacity:.025;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
 
-    :root {
-      --bg: #020203;
-      --surface: #08080c;
-      --card: #0c0c12;
-      --border: #1a1a24;
-      --border-h: #2a2a3a;
-      --text: #e8e8f0;
-      --muted: #6e6e8a;
-      --dim: #3e3e56;
-      --accent: #6366f1;
-      --accent2: #818cf8;
-      --accent-glow: rgba(99, 102, 241, 0.4);
-      --green: #22c55e;
-      --amber: #f59e0b;
-    }
+/* ═══ CURSOR ═══ */
+.c-dot{position:fixed;width:5px;height:5px;border-radius:50%;background:var(--accent2);box-shadow:0 0 14px var(--accent-g);pointer-events:none;z-index:10001;transform:translate(-50%,-50%);mix-blend-mode:screen}
+.c-ring{position:fixed;width:36px;height:36px;border-radius:50%;border:1.5px solid rgba(139,124,248,.3);pointer-events:none;z-index:10000;transform:translate(-50%,-50%);transition:width .18s,height .18s,border-color .18s,background .18s}
+body.c-h .c-ring{width:56px;height:56px;border-color:var(--accent2);background:rgba(109,91,239,.06)}
+/* Spotlight */
+.spotlight{position:fixed;width:600px;height:600px;border-radius:50%;pointer-events:none;z-index:-1;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(109,91,239,.06) 0%,transparent 70%);filter:blur(40px);transition:opacity .3s}
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Inter', system-ui, sans-serif;
-      overflow-x: hidden;
-      line-height: 1.6;
-      cursor: none;
-    }
+/* ═══ BACKGROUNDS ═══ */
+.bg-mesh{position:fixed;inset:0;z-index:-3;pointer-events:none;
+  background:radial-gradient(ellipse 80% 50% at 20% 35%,rgba(109,91,239,.07),transparent 55%),radial-gradient(ellipse 60% 45% at 80% 25%,rgba(139,92,246,.05),transparent 50%),radial-gradient(ellipse 50% 55% at 50% 80%,rgba(59,130,246,.03),transparent 50%)}
+.bg-grid{position:fixed;inset:0;z-index:-2;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);
+  background-size:52px 52px;
+  mask-image:radial-gradient(ellipse 70% 55% at 50% 30%,#000 15%,transparent 100%);-webkit-mask-image:radial-gradient(ellipse 70% 55% at 50% 30%,#000 15%,transparent 100%)}
 
-    /* ═══ CUSTOM CURSOR ═══ */
-    .cursor-dot {
-      position: fixed; width: 5px; height: 5px; border-radius: 50%;
-      background: var(--accent2); box-shadow: 0 0 12px var(--accent-glow);
-      pointer-events: none; z-index: 10000; transform: translate(-50%,-50%);
-      transition: width 0.15s, height 0.15s, background 0.15s;
-    }
-    .cursor-ring {
-      position: fixed; width: 36px; height: 36px; border-radius: 50%;
-      border: 1.5px solid rgba(129,140,248,0.3);
-      pointer-events: none; z-index: 9999; transform: translate(-50%,-50%);
-      transition: width 0.2s, height 0.2s, border-color 0.2s, background 0.2s;
-    }
-    body.cursor-hover .cursor-ring {
-      width: 52px; height: 52px; border-color: var(--accent2);
-      background: rgba(99,102,241,0.06);
-    }
+/* ═══ SCROLLBAR ═══ */
+.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}.no-scrollbar::-webkit-scrollbar{display:none}
+::-webkit-scrollbar{width:6px;background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--b2);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--accent)}
 
-    /* ═══ BACKGROUND ═══ */
-    .bg-mesh {
-      position: fixed; inset: 0; z-index: -2; pointer-events: none;
-      background:
-        radial-gradient(ellipse 80% 50% at 20% 40%, rgba(99,102,241,0.06), transparent 60%),
-        radial-gradient(ellipse 60% 40% at 80% 30%, rgba(139,92,246,0.04), transparent 50%),
-        radial-gradient(ellipse 50% 60% at 50% 80%, rgba(59,130,246,0.03), transparent 50%);
-    }
-    .bg-grid {
-      position: fixed; inset: 0; z-index: -1; pointer-events: none;
-      background-image:
-        linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
-      background-size: 48px 48px;
-      mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 20%, transparent 100%);
-      -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 20%, transparent 100%);
-    }
+/* ═══ NAV ═══ */
+.nav{position:fixed;top:0;left:0;right:0;z-index:500;padding:0 32px;transition:all .4s cubic-bezier(.4,0,.2,1);border-bottom:1px solid transparent}
+.nav.scrolled{background:rgba(2,2,4,.8);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-color:var(--b1)}
+.nav-i{max-width:1240px;margin:0 auto;height:72px;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{font-size:22px;font-weight:900;color:#fff;letter-spacing:-.05em;text-decoration:none;display:flex;align-items:center;gap:10px}
+.nav-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green);animation:pdot 2s infinite}
+@keyframes pdot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.25;transform:scale(.6)}}
+.nav-r{display:flex;align-items:center;gap:16px}
+.nav-v{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);background:var(--card);border:1px solid var(--b1);padding:6px 16px;border-radius:8px}
+.nav-v strong{color:var(--accent2);font-weight:600}
+.nav-gh{display:flex;align-items:center;gap:8px;color:var(--muted);text-decoration:none;font-size:13px;font-weight:500;padding:8px 20px;border:1px solid var(--b1);border-radius:8px;background:rgba(255,255,255,.02);transition:all .3s}
+.nav-gh:hover{border-color:var(--accent);color:#fff;background:rgba(109,91,239,.08);transform:translateY(-1px)}
 
-    /* ═══ NAV ═══ */
-    .nav {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      padding: 0 32px; transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
-      border-bottom: 1px solid transparent;
-    }
-    .nav.scrolled {
-      background: rgba(2,2,3,0.82);
-      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-      border-color: var(--border);
-    }
-    .nav-inner {
-      max-width: 1200px; margin: 0 auto; height: 72px;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .nav-logo {
-      font-size: 20px; font-weight: 800; color: #fff;
-      letter-spacing: -0.04em; text-decoration: none;
-      display: flex; align-items: center; gap: 10px;
-    }
-    .nav-dot {
-      width: 7px; height: 7px; border-radius: 50%;
-      background: var(--green); box-shadow: 0 0 10px var(--green);
-      animation: pulse-dot 2s infinite;
-    }
-    @keyframes pulse-dot { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.7); } }
-    .nav-right { display: flex; align-items: center; gap: 16px; }
-    .nav-badge {
-      font-family: 'JetBrains Mono', monospace; font-size: 11px;
-      color: var(--muted); background: var(--card);
-      border: 1px solid var(--border); padding: 6px 16px; border-radius: 8px;
-    }
-    .nav-badge strong { color: var(--accent2); font-weight: 600; }
-    .nav-gh {
-      display: flex; align-items: center; gap: 8px;
-      color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 500;
-      padding: 8px 18px; border: 1px solid var(--border); border-radius: 8px;
-      background: rgba(255,255,255,0.02); transition: all 0.3s;
-    }
-    .nav-gh:hover { border-color: var(--accent); color: #fff; background: rgba(99,102,241,0.08); }
+/* ═══ HERO ═══ */
+.hero{min-height:100vh;display:flex;align-items:center;padding:120px 32px 80px;position:relative;overflow:hidden}
+.hero-inner{max-width:1240px;margin:0 auto;width:100%;display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:center}
+.hero-text{display:flex;flex-direction:column;align-items:flex-start}
 
-    /* ═══ HERO ═══ */
-    .hero {
-      min-height: 100vh; display: flex; align-items: center; justify-content: center;
-      padding: 120px 32px 80px; position: relative;
-    }
-    .hero-inner {
-      max-width: 1200px; margin: 0 auto; width: 100%;
-      display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center;
-    }
-    .hero-text { display: flex; flex-direction: column; align-items: flex-start; }
-    .hero-pill {
-      display: inline-flex; align-items: center; gap: 8px;
-      font-family: 'JetBrains Mono', monospace; font-size: 11px;
-      letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted);
-      border: 1px solid var(--border); background: rgba(99,102,241,0.04);
-      padding: 7px 18px; border-radius: 100px; margin-bottom: 28px;
-      opacity: 0; animation: rise 0.7s 0.1s cubic-bezier(0.16,1,0.3,1) forwards;
-    }
-    .hero-pill .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
-    .hero-title {
-      font-size: clamp(56px, 8vw, 96px); font-weight: 900;
-      letter-spacing: -0.05em; line-height: 0.92; color: #fff;
-      margin-bottom: 24px;
-      opacity: 0; animation: rise 0.8s 0.2s cubic-bezier(0.16,1,0.3,1) forwards;
-    }
-    .hero-title .grad {
-      background: linear-gradient(135deg, #fff 0%, var(--accent2) 50%, #a78bfa 100%);
-      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-    }
-    .hero-sub {
-      font-size: 18px; color: var(--muted); max-width: 440px;
-      margin-bottom: 36px; line-height: 1.7;
-      opacity: 0; animation: rise 0.8s 0.35s cubic-bezier(0.16,1,0.3,1) forwards;
-    }
-    .hero-actions {
-      display: flex; gap: 14px; flex-wrap: wrap;
-      opacity: 0; animation: rise 0.8s 0.5s cubic-bezier(0.16,1,0.3,1) forwards;
-    }
-    .btn-primary {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: var(--accent); color: #fff; text-decoration: none;
-      padding: 14px 32px; border-radius: 10px; font-weight: 600; font-size: 14px;
-      box-shadow: 0 4px 24px var(--accent-glow); border: none; cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
-    }
-    .btn-primary:hover { background: var(--accent2); transform: translateY(-2px); box-shadow: 0 8px 32px var(--accent-glow); }
-    .btn-secondary {
-      display: inline-flex; align-items: center; gap: 8px;
-      color: var(--text); text-decoration: none;
-      padding: 14px 32px; border-radius: 10px; font-weight: 500; font-size: 14px;
-      border: 1px solid var(--border); background: rgba(255,255,255,0.02); cursor: pointer;
-      transition: all 0.3s;
-    }
-    .btn-secondary:hover { border-color: var(--accent); color: var(--accent2); background: rgba(99,102,241,0.06); }
+.h-pill{display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);border:1px solid var(--b1);background:rgba(109,91,239,.03);padding:7px 18px;border-radius:100px;margin-bottom:28px;opacity:0;animation:rise .7s .1s cubic-bezier(.16,1,.3,1) forwards}
+.h-pill .dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
 
-    .hero-stats {
-      display: flex; align-items: center; gap: 36px; margin-top: 40px;
-      opacity: 0; animation: rise 0.8s 0.65s cubic-bezier(0.16,1,0.3,1) forwards;
-    }
-    .stat { text-align: center; }
-    .stat-num { font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: 700; color: #fff; line-height: 1; }
-    .stat-label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.12em; margin-top: 6px; }
-    .stat-div { width: 1px; height: 36px; background: var(--border); }
+/* GLITCH TITLE */
+.h-title{font-size:clamp(60px,8.5vw,104px);font-weight:900;letter-spacing:-.06em;line-height:.9;margin-bottom:28px;position:relative;opacity:0;animation:rise .8s .2s cubic-bezier(.16,1,.3,1) forwards}
+.h-title .main-text{position:relative;display:inline-block}
+.h-title .grad{background:linear-gradient(135deg,#fff 0%,var(--accent2) 45%,#c4b5fd 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.h-title .glitch-layer{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;opacity:0;user-select:none}
+.h-title .gl-a{color:rgba(0,255,255,.6)}
+.h-title .gl-b{color:rgba(255,0,255,.4)}
+.h-title.glitch .gl-a{opacity:1;animation:gla .4s steps(3) forwards}
+.h-title.glitch .gl-b{opacity:1;animation:glb .4s steps(3) forwards}
+@keyframes gla{0%{clip-path:inset(5% 0 88% 0);transform:translate(-3px)}33%{clip-path:inset(45% 0 40% 0);transform:translate(3px)}66%{clip-path:inset(72% 0 12% 0);transform:translate(-2px)}100%{clip-path:inset(0 0 100% 0);opacity:0}}
+@keyframes glb{0%{clip-path:inset(62% 0 22% 0);transform:translate(3px)}33%{clip-path:inset(18% 0 68% 0);transform:translate(-3px)}66%{clip-path:inset(38% 0 48% 0);transform:translate(2px)}100%{clip-path:inset(0 0 100% 0);opacity:0}}
 
-    @keyframes rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+.h-sub{font-size:18px;color:var(--muted);max-width:460px;margin-bottom:40px;line-height:1.75;opacity:0;animation:rise .8s .35s cubic-bezier(.16,1,.3,1) forwards}
+.h-actions{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:48px;opacity:0;animation:rise .8s .5s cubic-bezier(.16,1,.3,1) forwards}
+.btn-p{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;text-decoration:none;padding:15px 34px;border-radius:12px;font-weight:600;font-size:14px;border:none;cursor:pointer;box-shadow:0 4px 28px var(--accent-g);transition:all .3s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden}
+.btn-p::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.15) 50%,transparent 60%);transform:translateX(-100%);transition:transform .6s}
+.btn-p:hover::before{transform:translateX(100%)}
+.btn-p:hover{background:var(--accent2);transform:translateY(-3px);box-shadow:0 10px 40px var(--accent-g)}
+.btn-s{display:inline-flex;align-items:center;gap:8px;color:var(--text);text-decoration:none;padding:15px 34px;border-radius:12px;font-weight:500;font-size:14px;border:1px solid var(--b2);background:rgba(255,255,255,.02);cursor:pointer;transition:all .3s}
+.btn-s:hover{border-color:var(--accent);color:var(--accent2);background:rgba(109,91,239,.06);transform:translateY(-2px)}
 
-    /* ═══ HERO RIGHT: OBSIDIAN WIDGET ═══ */
-    .hero-widget-wrap {
-      position: relative;
-      opacity: 0; animation: rise 1s 0.4s cubic-bezier(0.16,1,0.3,1) forwards;
-    }
-    .hero-widget-glow {
-      position: absolute; inset: -20px;
-      background: radial-gradient(ellipse at center, var(--accent-glow) 0%, transparent 70%);
-      opacity: 0.3; filter: blur(60px); pointer-events: none;
-      animation: glow-pulse 4s ease-in-out infinite alternate;
-    }
-    @keyframes glow-pulse { from { opacity: 0.2; } to { opacity: 0.45; } }
-    .hero-widget {
-      position: relative; border-radius: 16px; overflow: hidden;
-      border: 1px solid var(--border); background: #080810;
-      box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03);
-      height: 520px;
-      transition: transform 0.5s cubic-bezier(0.4,0,0.2,1), box-shadow 0.5s;
-    }
-    .hero-widget:hover {
-      transform: translateY(-6px) scale(1.005);
-      box-shadow: 0 40px 100px rgba(0,0,0,0.7), 0 0 60px rgba(99,102,241,0.1);
-    }
-    .widget-caption {
-      text-align: center; margin-top: 20px;
-      font-family: 'JetBrains Mono', monospace; font-size: 11px;
-      color: var(--dim); display: flex; align-items: center; justify-content: center; gap: 8px;
-    }
+/* HERO STATS ROW */
+.h-stats{display:flex;align-items:center;gap:32px;opacity:0;animation:rise .8s .65s cubic-bezier(.16,1,.3,1) forwards}
+.stat{text-align:center}.stat-n{font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:700;color:#fff;line-height:1}.stat-l{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.14em;margin-top:6px;font-weight:600}.stat-d{width:1px;height:40px;background:var(--b1)}
 
-    /* ═══ SCROLLBAR OVERRIDES ═══ */
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    .no-scrollbar::-webkit-scrollbar { width: 0; height: 0; display: none; }
+@keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:translateY(0)}}
 
-    /* ═══ TICKER STRIPE ═══ */
-    .ticker {
-      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-      padding: 16px 0; overflow: hidden;
-      background: linear-gradient(90deg, var(--bg), rgba(99,102,241,0.02), var(--bg));
-    }
-    .ticker-track {
-      display: flex; gap: 56px; white-space: nowrap; width: max-content;
-      animation: scroll-ticker 35s linear infinite;
-    }
-    .ticker-item {
-      display: flex; align-items: center; gap: 12px;
-      font-family: 'JetBrains Mono', monospace; font-size: 12px;
-      color: var(--dim); letter-spacing: 0.06em; text-transform: uppercase;
-    }
-    .ticker-dot { width: 4px; height: 4px; background: var(--accent); border-radius: 1px; transform: rotate(45deg); opacity: 0.5; }
-    @keyframes scroll-ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+/* ═══ OBSIDIAN WIDGET ═══ */
+.hw-wrap{position:relative;opacity:0;animation:rise 1s .45s cubic-bezier(.16,1,.3,1) forwards}
+.hw-glow{position:absolute;inset:-30px;background:radial-gradient(ellipse at center,var(--accent-g) 0%,transparent 65%);opacity:.25;filter:blur(80px);pointer-events:none;animation:gpulse 5s ease-in-out infinite alternate}
+@keyframes gpulse{from{opacity:.2;transform:scale(.95)}to{opacity:.4;transform:scale(1.05)}}
+.hw-box{position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--b1);background:#06060e;box-shadow:0 40px 100px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.03);height:540px;transition:all .5s cubic-bezier(.4,0,.2,1)}
+.hw-box:hover{transform:translateY(-8px) scale(1.005);box-shadow:0 50px 120px rgba(0,0,0,.8),0 0 80px rgba(109,91,239,.1);border-color:rgba(109,91,239,.25)}
+/* Animated gradient border */
+.hw-border{position:absolute;inset:-1px;border-radius:19px;padding:1px;background:conic-gradient(from 0deg,transparent 0%,var(--accent) 10%,transparent 20%,transparent 100%);mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:xor;-webkit-mask-composite:xor;animation:borderSpin 4s linear infinite;pointer-events:none;opacity:0;transition:opacity .4s}
+.hw-box:hover .hw-border{opacity:1}
+@keyframes borderSpin{to{transform:rotate(360deg)}}
+.hw-caption{text-align:center;margin-top:20px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);display:flex;align-items:center;justify-content:center;gap:8px}
 
-    /* ═══ SECTION COMMONS ═══ */
-    .section { padding: 120px 32px; position: relative; }
-    .section-inner { max-width: 1200px; margin: 0 auto; }
-    .section-label {
-      font-family: 'JetBrains Mono', monospace; font-size: 11px;
-      letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent2);
-      margin-bottom: 14px; display: flex; align-items: center; gap: 10px;
-    }
-    .section-label::before { content: ''; width: 28px; height: 1px; background: var(--accent); opacity: 0.5; }
-    .section-title { font-size: 40px; font-weight: 800; color: #fff; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 14px; }
-    .section-desc { font-size: 16px; color: var(--muted); max-width: 540px; line-height: 1.7; }
+/* ═══ TICKER ═══ */
+.ticker{border-top:1px solid var(--b1);border-bottom:1px solid var(--b1);padding:16px 0;overflow:hidden;background:linear-gradient(90deg,var(--bg),rgba(109,91,239,.015),var(--bg))}
+.ticker-t{display:flex;gap:60px;white-space:nowrap;width:max-content;animation:tscrll 40s linear infinite}
+.ticker-i{display:flex;align-items:center;gap:12px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--dim);letter-spacing:.06em;text-transform:uppercase}
+.ticker-d{width:4px;height:4px;background:var(--accent);border-radius:1px;transform:rotate(45deg);opacity:.4}
+@keyframes tscrll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 
-    /* ═══ SCROLL REVEAL ═══ */
-    .sr { opacity: 0; transform: translateY(32px); transition: all 0.8s cubic-bezier(0.16,1,0.3,1); }
-    .sr.visible { opacity: 1; transform: translateY(0); }
-    .sr-d1 { transition-delay: 80ms; } .sr-d2 { transition-delay: 160ms; }
-    .sr-d3 { transition-delay: 240ms; } .sr-d4 { transition-delay: 320ms; }
-    .sr-d5 { transition-delay: 400ms; } .sr-d6 { transition-delay: 480ms; }
+/* ═══ STATS STRIPE ═══ */
+.stripe{background:var(--s1);border-bottom:1px solid var(--b1);padding:28px 0}
+.stripe-in{max-width:1240px;margin:0 auto;padding:0 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px}
+.stripe-item{display:flex;align-items:center;gap:14px}
+.stripe-ico{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.stripe-val{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#fff}
+.stripe-lbl{font-size:12px;color:var(--muted)}
+.stripe-div{width:1px;height:28px;background:var(--b1)}
 
-    /* ═══ FEATURES BENTO ═══ */
-    .bento { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-    .bento-card {
-      position: relative; background: var(--card); border: 1px solid var(--border);
-      border-radius: 16px; padding: 36px 32px; overflow: hidden; cursor: default;
-      transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
-    }
-    .bento-card::before {
-      content: ''; position: absolute; inset: 0;
-      background: radial-gradient(circle at 30% 20%, rgba(99,102,241,0.08), transparent 65%);
-      opacity: 0; transition: opacity 0.4s; pointer-events: none;
-    }
-    .bento-card:hover::before { opacity: 1; }
-    .bento-card:hover { border-color: rgba(99,102,241,0.35); transform: translateY(-4px); box-shadow: 0 16px 48px rgba(0,0,0,0.4); }
-    .bento-icon {
-      width: 52px; height: 52px; border-radius: 14px;
-      background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.18);
-      display: flex; align-items: center; justify-content: center; font-size: 22px;
-      margin-bottom: 22px;
-    }
-    .bento-card h3 { font-size: 17px; font-weight: 700; color: #fff; margin-bottom: 10px; }
-    .bento-card p { font-size: 14px; color: var(--muted); line-height: 1.7; }
+/* ═══ SECTION SHARED ═══ */
+.sec{padding:120px 32px;position:relative}.sec-i{max-width:1240px;margin:0 auto}
+.sec-lbl{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent2);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.sec-lbl::before{content:'';width:28px;height:1px;background:var(--accent);opacity:.5}
+.sec-h{font-size:42px;font-weight:800;color:#fff;letter-spacing:-.03em;line-height:1.12;margin-bottom:14px}
+.sec-p{font-size:16px;color:var(--muted);max-width:560px;line-height:1.7}
 
-    .bento-wide {
-      grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr;
-      align-items: center; gap: 40px;
-      background: linear-gradient(145deg, #0a0a14, #0d0d18);
-      border-color: rgba(99,102,241,0.15);
-    }
-    .bento-wide:hover { border-color: rgba(99,102,241,0.4); box-shadow: 0 20px 60px rgba(99,102,241,0.08); }
-    .wide-visual {
-      display: flex; flex-direction: column; gap: 10px;
-      padding: 24px; background: rgba(0,0,0,0.4); border-radius: 12px;
-      border: 1px solid rgba(99,102,241,0.1);
-      font-family: 'JetBrains Mono', monospace; font-size: 12px;
-    }
-    .wv-line { display: flex; align-items: center; gap: 10px; color: var(--dim); }
-    .wv-line .d { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-    .d-g { background: var(--green); box-shadow: 0 0 6px var(--green); }
-    .d-a { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
-    .d-p { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
-    .wv-line span { color: var(--muted); }
-    .sync-badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: rgba(34,197,94,0.06); border: 1px solid rgba(34,197,94,0.15);
-      padding: 6px 14px; border-radius: 6px; font-size: 11px; color: var(--green); margin-top: 12px;
-    }
-    .sync-spin { width: 12px; height: 12px; border: 2px solid rgba(34,197,94,0.2); border-top-color: var(--green); border-radius: 50%; animation: spin 0.7s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+/* ═══ SCROLL REVEAL ═══ */
+.sr{opacity:0;transform:translateY(34px);transition:all .8s cubic-bezier(.16,1,.3,1)}
+.sr.vis{opacity:1;transform:translateY(0)}
+.sr-d1{transition-delay:80ms}.sr-d2{transition-delay:160ms}.sr-d3{transition-delay:240ms}.sr-d4{transition-delay:320ms}.sr-d5{transition-delay:400ms}.sr-d6{transition-delay:480ms}
 
-    /* ═══ TERMINAL ═══ */
-    .terminal {
-      background: #04040a; border: 1px solid var(--border); border-radius: 16px;
-      overflow: hidden; max-width: 820px; margin: 0 auto;
-      box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 80px rgba(99,102,241,0.05);
-    }
-    .term-bar {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 20px; border-bottom: 1px solid var(--border);
-      background: rgba(255,255,255,0.015);
-    }
-    .term-dots { display: flex; gap: 8px; }
-    .term-dots i { display: block; width: 11px; height: 11px; border-radius: 50%; }
-    .td-r { background: #ff5f57; } .td-y { background: #febc2e; } .td-g { background: #28c840; }
-    .term-title { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim); }
-    .term-body {
-      padding: 28px 28px; font-family: 'JetBrains Mono', monospace;
-      font-size: 13px; line-height: 2.2; min-height: 260px;
-    }
-    .term-line { display: flex; align-items: flex-start; gap: 12px; opacity: 0; animation: fadein 0.25s ease forwards; }
-    .t-prompt { color: var(--accent2); flex-shrink: 0; user-select: none; }
-    .t-cmd { color: #e4e4f0; }
-    .t-info { color: var(--muted); }
-    .t-ok { color: var(--green); }
-    .t-cursor { display: inline-block; width: 8px; height: 16px; background: var(--accent2); vertical-align: middle; animation: blink 1s step-end infinite; margin-left: 4px; }
-    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
-    @keyframes fadein { to { opacity: 1; } }
+/* ═══ FEATURES BENTO ═══ */
+.bento{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.bc{position:relative;background:var(--card);border:1px solid var(--b1);border-radius:18px;padding:38px 32px;overflow:hidden;cursor:default;transition:all .4s cubic-bezier(.4,0,.2,1)}
+.bc::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 20%,rgba(109,91,239,.08),transparent 60%);opacity:0;transition:opacity .4s;pointer-events:none}
+.bc:hover::before{opacity:1}
+.bc:hover{border-color:rgba(109,91,239,.35);transform:translateY(-5px);box-shadow:0 18px 50px rgba(0,0,0,.5)}
+/* Card shine effect */
+.bc::after{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.03) 50%,transparent 60%);transform:rotate(45deg) translateY(100%);transition:transform .6s;pointer-events:none}
+.bc:hover::after{transform:rotate(45deg) translateY(-30%)}
+.bc-icon{width:54px;height:54px;border-radius:14px;background:rgba(109,91,239,.1);border:1px solid rgba(109,91,239,.18);display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:24px}
+.bc h3{font-size:18px;font-weight:700;color:#fff;margin-bottom:10px}
+.bc p{font-size:14px;color:var(--muted);line-height:1.75}
+.bc-wide{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:40px;background:linear-gradient(145deg,#0a0a16,#0e0e1c);border-color:rgba(109,91,239,.15)}
+.bc-wide:hover{border-color:rgba(109,91,239,.4);box-shadow:0 22px 70px rgba(109,91,239,.08)}
+.wv{display:flex;flex-direction:column;gap:10px;padding:24px;background:rgba(0,0,0,.4);border-radius:12px;border:1px solid rgba(109,91,239,.1);font-family:'JetBrains Mono',monospace;font-size:12px}
+.wv-l{display:flex;align-items:center;gap:10px;color:var(--dim)}.wv-l .d{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.d-g{background:var(--green);box-shadow:0 0 6px var(--green)}.d-a{background:var(--amber);box-shadow:0 0 6px var(--amber)}.d-p{background:var(--accent2);box-shadow:0 0 6px var(--accent2)}
+.wv-l span{color:var(--muted)}
+.sync-b{display:inline-flex;align-items:center;gap:8px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15);padding:6px 14px;border-radius:6px;font-size:11px;color:var(--green);margin-top:16px;font-family:'JetBrains Mono',monospace}
+.sync-sp{width:12px;height:12px;border:2px solid rgba(34,197,94,.2);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-    /* ═══ ARCHITECTURE DOCS ═══ */
-    .arch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .arch-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
-      padding: 36px 32px; position: relative; overflow: hidden;
-      transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
-    }
-    .arch-card::after {
-      content: ''; position: absolute; inset: 0;
-      background: radial-gradient(circle at 50% 0%, rgba(99,102,241,0.05), transparent 60%);
-      opacity: 0; transition: opacity 0.4s; pointer-events: none;
-    }
-    .arch-card:hover::after { opacity: 1; }
-    .arch-card:hover { border-color: var(--border-h); transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
-    .arch-num {
-      font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700;
-      width: 52px; height: 52px; border-radius: 14px;
-      display: flex; align-items: center; justify-content: center; margin-bottom: 24px;
-    }
-    .arch-card h3 { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 12px; letter-spacing: -0.01em; }
-    .arch-card > p { font-size: 14px; color: var(--muted); line-height: 1.75; margin-bottom: 16px; }
-    .arch-detail {
-      font-size: 13px; color: var(--dim); line-height: 1.7;
-      border-left: 2px solid var(--border); padding-left: 16px;
-    }
-    .arch-detail strong { color: var(--accent2); font-weight: 600; }
-    .arch-full {
-      grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start;
-      background: linear-gradient(135deg, #0a0a14, #0e0e1a);
-    }
-    .arch-code {
-      background: rgba(0,0,0,0.5); border: 1px solid var(--border); border-radius: 12px;
-      padding: 24px; font-family: 'JetBrains Mono', monospace; font-size: 12px;
-      line-height: 1.9; color: var(--muted); overflow-x: auto;
-    }
-    .arch-code .kw { color: #c084fc; } .arch-code .fn { color: var(--accent2); }
-    .arch-code .cm { color: var(--dim); font-style: italic; } .arch-code .st { color: #6ee7b7; }
-    .arch-code .num { color: #fbbf24; }
+/* ═══ TERMINAL ═══ */
+.term{background:#04040b;border:1px solid var(--b1);border-radius:18px;overflow:hidden;max-width:860px;margin:0 auto;box-shadow:0 40px 100px rgba(0,0,0,.65),0 0 80px rgba(109,91,239,.04)}
+.term-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-bottom:1px solid var(--b1);background:rgba(255,255,255,.012)}
+.term-dots{display:flex;gap:8px}.term-dots i{display:block;width:11px;height:11px;border-radius:50%}
+.td-r{background:#ff5f57}.td-y{background:#febc2e}.td-g{background:#28c840}
+.term-ti{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--dim)}
+.term-b{padding:30px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:2.2;min-height:280px}
+.t-line{display:flex;align-items:flex-start;gap:12px;opacity:0;animation:fin .25s ease forwards}
+.t-pr{color:var(--accent2);flex-shrink:0;user-select:none}.t-cmd{color:#e4e4f0}.t-info{color:var(--muted)}.t-ok{color:var(--green)}
+.t-cursor{display:inline-block;width:8px;height:16px;background:var(--accent2);vertical-align:middle;animation:blink 1s step-end infinite;margin-left:4px}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes fin{to{opacity:1}}
 
-    /* ═══ INSTALL ═══ */
-    .install-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 960px; margin: 0 auto; }
-    .install-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
-      padding: 36px 32px; position: relative; overflow: hidden;
-      transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
-    }
-    .install-card:hover { border-color: var(--border-h); transform: translateY(-3px); }
-    .install-card.featured {
-      background: linear-gradient(145deg, #0c0c18, #100f1e);
-      border-color: rgba(99,102,241,0.2);
-    }
-    .install-card.featured:hover { border-color: rgba(99,102,241,0.5); box-shadow: 0 20px 60px rgba(99,102,241,0.1); }
-    .install-badge {
-      font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700;
-      letter-spacing: 0.1em; text-transform: uppercase;
-      padding: 4px 12px; border-radius: 6px;
-    }
-    .install-code {
-      background: rgba(0,0,0,0.5); border: 1px solid var(--border); border-radius: 10px;
-      padding: 16px 18px; font-family: 'JetBrains Mono', monospace; font-size: 12px;
-      color: var(--muted); margin: 20px 0; word-break: break-all; line-height: 1.8;
-    }
-    .install-code .fn { color: var(--accent2); } .install-code .kw { color: #c084fc; }
-    .install-code .st { color: #fff; }
-    .install-btn {
-      width: 100%; padding: 14px; border-radius: 10px; font-weight: 600; font-size: 14px;
-      border: none; cursor: pointer; transition: all 0.3s; font-family: 'Inter', sans-serif;
-    }
-    .install-btn-primary { background: var(--accent); color: #fff; box-shadow: 0 4px 20px var(--accent-glow); }
-    .install-btn-primary:hover { background: var(--accent2); transform: translateY(-2px); }
-    .install-btn-ghost { background: rgba(255,255,255,0.03); color: var(--text); border: 1px solid var(--border); }
-    .install-btn-ghost:hover { border-color: var(--accent); color: var(--accent2); }
-    .install-btn.copied { background: var(--green) !important; color: #fff !important; border-color: var(--green) !important; }
+/* ═══ ARCHITECTURE ═══ */
+.arch-g{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.ac{background:var(--card);border:1px solid var(--b1);border-radius:18px;padding:38px 34px;position:relative;overflow:hidden;transition:all .4s cubic-bezier(.4,0,.2,1)}
+.ac::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,rgba(109,91,239,.05),transparent 55%);opacity:0;transition:opacity .4s;pointer-events:none}
+.ac:hover::after{opacity:1}
+.ac:hover{border-color:var(--b2);transform:translateY(-4px);box-shadow:0 14px 45px rgba(0,0,0,.45)}
+.ac-num{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;width:54px;height:54px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:26px}
+.ac h3{font-size:21px;font-weight:700;color:#fff;margin-bottom:14px;letter-spacing:-.01em}
+.ac>p{font-size:14px;color:var(--muted);line-height:1.75;margin-bottom:18px}
+.ac-detail{font-size:13px;color:var(--dim);line-height:1.75;border-left:2px solid var(--b1);padding-left:18px}
+.ac-detail strong{color:var(--accent2);font-weight:600}
+.ac-full{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:start;background:linear-gradient(135deg,#0a0a16,#0e0e1c)}
+.ac-code{background:rgba(0,0,0,.5);border:1px solid var(--b1);border-radius:14px;padding:26px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.9;color:var(--muted);overflow-x:auto}
+.ac-code .kw{color:#c084fc}.ac-code .fn{color:var(--accent2)}.ac-code .cm{color:var(--dim);font-style:italic}.ac-code .st{color:#6ee7b7}.ac-code .num{color:#fbbf24}
 
-    /* ═══ STEPS ═══ */
-    .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-    .step-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
-      padding: 36px 28px; transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
-    }
-    .step-card:hover { border-color: var(--border-h); transform: translateY(-3px); }
-    .step-num {
-      font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700;
-      color: var(--accent2); background: rgba(99,102,241,0.1);
-      border: 1px solid rgba(99,102,241,0.18); border-radius: 8px;
-      padding: 5px 14px; display: inline-flex; margin-bottom: 22px;
-    }
-    .step-card h4 { font-size: 17px; font-weight: 600; color: #fff; margin-bottom: 10px; }
-    .step-card p { font-size: 14px; color: var(--muted); line-height: 1.7; }
-    .step-card code { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent2); background: rgba(99,102,241,0.08); padding: 2px 8px; border-radius: 4px; }
+/* ═══ COMPARISON TABLE ═══ */
+.cmp-table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--b1);border-radius:16px;overflow:hidden;font-size:14px}
+.cmp-table thead{background:var(--card2)}
+.cmp-table th{padding:18px 24px;text-align:left;font-weight:600;color:#fff;border-bottom:1px solid var(--b1)}
+.cmp-table th:first-child{color:var(--muted);font-weight:500}
+.cmp-table td{padding:14px 24px;border-bottom:1px solid rgba(26,26,46,.5);color:var(--muted)}
+.cmp-table tr:last-child td{border-bottom:none}
+.cmp-table .cmp-kaim{color:var(--accent2);font-weight:600}
+.cmp-check{color:var(--green);font-weight:700}.cmp-x{color:var(--red);opacity:.5}
 
-    /* ═══ FOOTER ═══ */
-    footer {
-      border-top: 1px solid var(--border); padding: 60px 32px 72px;
-      text-align: center; background: var(--surface);
-    }
-    .f-logo { font-size: 24px; font-weight: 800; color: #fff; letter-spacing: -0.04em; margin-bottom: 20px; }
-    .f-links { display: flex; gap: 28px; justify-content: center; margin-bottom: 24px; flex-wrap: wrap; }
-    .f-links a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; }
-    .f-links a:hover { color: var(--accent2); }
-    .f-copy { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--dim); }
+/* ═══ CHANGELOG ═══ */
+.cl-timeline{position:relative;padding-left:36px}
+.cl-timeline::before{content:'';position:absolute;left:15px;top:8px;bottom:8px;width:2px;background:linear-gradient(var(--accent),var(--b1))}
+.cl-item{position:relative;margin-bottom:40px}
+.cl-item:last-child{margin-bottom:0}
+.cl-dot{position:absolute;left:-36px;top:6px;width:12px;height:12px;border-radius:50%;border:2px solid var(--accent);background:var(--bg)}
+.cl-item:first-child .cl-dot{background:var(--accent);box-shadow:0 0 12px var(--accent-g)}
+.cl-ver{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--accent2);margin-bottom:4px;display:flex;align-items:center;gap:10px}
+.cl-badge{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:2px 10px;border-radius:4px}
+.cl-date{font-size:12px;color:var(--dim);margin-bottom:10px}
+.cl-list{list-style:none;font-size:14px;color:var(--muted);line-height:1.9}
+.cl-list li::before{content:'›';color:var(--accent);margin-right:8px;font-weight:700}
 
-    /* ═══ RESPONSIVE ═══ */
-    @media (max-width: 900px) {
-      body { cursor: auto; }
-      .cursor-dot, .cursor-ring { display: none; }
-      .hero-inner { grid-template-columns: 1fr; gap: 48px; }
-      .hero-title { font-size: 56px; }
-      .bento { grid-template-columns: 1fr; } .bento-wide { grid-template-columns: 1fr; }
-      .arch-grid { grid-template-columns: 1fr; } .arch-full { grid-template-columns: 1fr; }
-      .install-grid { grid-template-columns: 1fr; }
-      .steps-grid { grid-template-columns: 1fr; }
-      .wide-visual { display: none; }
-    }
-    @media (max-width: 540px) { .nav-badge { display: none; } .hero { padding-top: 100px; } }
-  </style>
+/* ═══ FAQ ACCORDION ═══ */
+.faq-item{border:1px solid var(--b1);border-radius:14px;margin-bottom:10px;overflow:hidden;background:var(--card);transition:border-color .3s}
+.faq-item:hover{border-color:var(--b2)}
+.faq-q{display:flex;align-items:center;justify-content:space-between;padding:20px 26px;cursor:pointer;font-weight:600;font-size:15px;color:#fff;user-select:none;transition:background .3s}
+.faq-q:hover{background:rgba(109,91,239,.04)}
+.faq-arrow{transition:transform .3s;color:var(--muted);font-size:18px}
+.faq-item.open .faq-arrow{transform:rotate(180deg);color:var(--accent2)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .4s cubic-bezier(.4,0,.2,1),padding .4s}
+.faq-item.open .faq-a{max-height:300px;padding:0 26px 22px}
+.faq-a p{font-size:14px;color:var(--muted);line-height:1.7}
+
+/* ═══ FILE TREE ═══ */
+.tree-box{background:#04040b;border:1px solid var(--b1);border-radius:16px;padding:28px 32px;font-family:'JetBrains Mono',monospace;font-size:14px;line-height:2.2;min-height:220px;max-height:400px;overflow-y:auto}
+.tree-dir{color:var(--accent2);font-weight:600;margin-bottom:8px}
+.tree-row{display:flex;align-items:center;gap:12px;transition:color .2s}
+.tree-row:hover .tree-f{color:var(--text)}
+.tree-f{color:var(--dim);transition:color .2s}.tree-m{color:#ddd}
+.tree-badge{font-size:9px;padding:2px 8px;border-radius:4px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.tb-l{background:rgba(109,91,239,.15);color:var(--accent2)}.tb-s{background:rgba(34,197,94,.12);color:#86efac}.tb-r{border:1px solid var(--b2);color:var(--dim)}
+.tree-search{background:var(--card);border:1px solid var(--b1);border-radius:8px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;padding:10px 16px;outline:none;width:240px;transition:border-color .2s}
+.tree-search:focus{border-color:var(--accent)}.tree-search::placeholder{color:var(--dim)}
+.tree-load{display:flex;align-items:center;gap:12px;color:var(--dim);padding:28px 0}
+.tree-spin{width:16px;height:16px;border:2px solid var(--b2);border-top-color:var(--accent2);border-radius:50%;animation:spin .6s linear infinite}
+
+/* ═══ INSTALL ═══ */
+.inst-g{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:1000px;margin:0 auto}
+.inst-c{background:var(--card);border:1px solid var(--b1);border-radius:18px;padding:40px 34px;position:relative;overflow:hidden;transition:all .4s cubic-bezier(.4,0,.2,1)}
+.inst-c:hover{border-color:var(--b2);transform:translateY(-4px)}
+.inst-c.feat{background:linear-gradient(145deg,#0c0c1a,#100f22);border-color:rgba(109,91,239,.2)}
+.inst-c.feat:hover{border-color:rgba(109,91,239,.5);box-shadow:0 22px 65px rgba(109,91,239,.1)}
+.inst-badge{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 14px;border-radius:6px}
+.inst-code{background:rgba(0,0,0,.45);border:1px solid var(--b1);border-radius:12px;padding:18px 20px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);margin:22px 0;word-break:break-all;line-height:1.8}
+.inst-code .fn{color:var(--accent2)}.inst-code .kw{color:#c084fc}.inst-code .st{color:#fff}
+.inst-btn{width:100%;padding:15px;border-radius:12px;font-weight:600;font-size:14px;border:none;cursor:pointer;transition:all .3s;font-family:'Inter',sans-serif}
+.inst-btn-p{background:var(--accent);color:#fff;box-shadow:0 4px 24px var(--accent-g)}
+.inst-btn-p:hover{background:var(--accent2);transform:translateY(-2px)}
+.inst-btn-g{background:rgba(255,255,255,.03);color:var(--text);border:1px solid var(--b1)}
+.inst-btn-g:hover{border-color:var(--accent);color:var(--accent2)}
+.inst-btn.copied{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important}
+
+/* ═══ STEPS ═══ */
+.steps-g{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.sc{background:var(--card);border:1px solid var(--b1);border-radius:18px;padding:38px 30px;transition:all .4s cubic-bezier(.4,0,.2,1)}
+.sc:hover{border-color:var(--b2);transform:translateY(-4px);box-shadow:0 14px 40px rgba(0,0,0,.4)}
+.sc-num{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--accent2);background:rgba(109,91,239,.1);border:1px solid rgba(109,91,239,.18);border-radius:10px;padding:6px 16px;display:inline-flex;margin-bottom:24px}
+.sc h4{font-size:18px;font-weight:600;color:#fff;margin-bottom:10px}.sc p{font-size:14px;color:var(--muted);line-height:1.7}
+.sc code{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent2);background:rgba(109,91,239,.08);padding:2px 8px;border-radius:4px}
+
+/* ═══ FOOTER ═══ */
+footer{border-top:1px solid var(--b1);padding:64px 32px 80px;text-align:center;background:var(--s1)}
+.f-logo{font-size:26px;font-weight:900;color:#fff;letter-spacing:-.05em;margin-bottom:22px}
+.f-links{display:flex;gap:28px;justify-content:center;margin-bottom:24px;flex-wrap:wrap}
+.f-links a{color:var(--muted);text-decoration:none;font-size:14px;font-weight:500;transition:color .2s}.f-links a:hover{color:var(--accent2)}
+.f-copy{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--dim)}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:960px){body{cursor:auto}.c-dot,.c-ring,.spotlight{display:none}.hero-inner{grid-template-columns:1fr;gap:48px}.h-title{font-size:56px}.bento{grid-template-columns:1fr}.bc-wide{grid-template-columns:1fr}.arch-g{grid-template-columns:1fr}.ac-full{grid-template-columns:1fr}.inst-g{grid-template-columns:1fr}.steps-g{grid-template-columns:1fr}.wv,.ac-code{display:none}.stripe-div{display:none}.cmp-table{font-size:12px}.cmp-table th,.cmp-table td{padding:10px 14px}}
+@media(max-width:540px){.nav-v{display:none}.hero{padding-top:100px}}
+</style>
 </head>
 <body>
-
-<div class="cursor-dot" id="cdot"></div>
-<div class="cursor-ring" id="cring"></div>
+<div class="c-dot" id="cdot"></div>
+<div class="c-ring" id="cring"></div>
+<div class="spotlight" id="spot"></div>
 <div class="bg-mesh"></div>
 <div class="bg-grid"></div>
-<canvas id="particles" style="position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:0.4"></canvas>
+<canvas id="ptc" style="position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.35"></canvas>
 
 <!-- NAV -->
 <nav class="nav" id="nav">
-  <div class="nav-inner">
-    <a href="#" class="nav-logo">kaim <span class="nav-dot"></span></a>
-    <div class="nav-right">
-      <div class="nav-badge" id="nav-badge-wrap">latest: <strong id="nav-ver">—</strong></div>
-      <a href="https://github.com/sdwird/kaim" target="_blank" rel="noopener" class="nav-gh">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.341-3.369-1.341-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
-        GitHub
-      </a>
+  <div class="nav-i">
+    <a href="#" class="nav-logo" onclick="scrollTo({top:0,behavior:'smooth'});return false">kaim<span class="nav-dot"></span></a>
+    <div class="nav-r">
+      <div class="nav-v">latest: <strong id="nav-ver">—</strong></div>
+      <a href="https://github.com/sdwird/kaim" target="_blank" rel="noopener" class="nav-gh"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.341-3.369-1.341-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>GitHub</a>
     </div>
   </div>
 </nav>
@@ -476,410 +289,189 @@
 <section class="hero">
   <div class="hero-inner">
     <div class="hero-text">
-      <div class="hero-pill"><span class="dot"></span>Lua · Roblox · PC Only</div>
-      <h1 class="hero-title"><span class="grad">kaim</span><br>obsidian.</h1>
-      <p class="hero-sub">The ultimate precision aimbot script. Zero-latency engine, stunning Obsidian UI, and deep optimizations that push Roblox executors to their absolute limits.</p>
-      <div class="hero-actions">
-        <a href="#install" class="btn-primary">Get Loadstring ↓</a>
-        <a href="#arch" class="btn-secondary">Engine Architecture →</a>
+      <div class="h-pill"><span class="dot"></span>Lua · Roblox · PC Only</div>
+      <h1 class="h-title" id="htitle">
+        <span class="main-text"><span class="grad">kaim</span><span class="glitch-layer gl-a" aria-hidden="true">kaim</span><span class="glitch-layer gl-b" aria-hidden="true">kaim</span></span><br>obsidian.
+      </h1>
+      <p class="h-sub">Precision aimbot with a zero-latency engine. Stunning Obsidian UI, deep optimizations, and competitive-grade features that push Roblox executors to their absolute limits.</p>
+      <div class="h-actions">
+        <a href="#install" class="btn-p">Get Loadstring ↓</a>
+        <a href="#arch" class="btn-s">Engine Specs →</a>
       </div>
-      <div class="hero-stats">
-        <div class="stat"><div class="stat-num" id="s-stars">—</div><div class="stat-label">Stars</div></div>
-        <div class="stat-div"></div>
-        <div class="stat"><div class="stat-num" id="s-forks">—</div><div class="stat-label">Forks</div></div>
-        <div class="stat-div"></div>
-        <div class="stat"><div class="stat-num" id="s-vers">—</div><div class="stat-label">Versions</div></div>
+      <div class="h-stats">
+        <div class="stat"><div class="stat-n" id="s-stars">—</div><div class="stat-l">Stars</div></div>
+        <div class="stat-d"></div>
+        <div class="stat"><div class="stat-n" id="s-forks">—</div><div class="stat-l">Forks</div></div>
+        <div class="stat-d"></div>
+        <div class="stat"><div class="stat-n" id="s-vers">—</div><div class="stat-l">Versions</div></div>
       </div>
     </div>
-
-    <div class="hero-widget-wrap">
-      <div class="hero-widget-glow"></div>
-      <div class="hero-widget">
-        <Obsidian
-          title="kaim"
-          footer="version: 10.1 (Stable)"
-          icon="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/GitHub_Invertocat_Logo.svg/1200px-GitHub_Invertocat_Logo.svg.png">
-          <script type="application/json">
-            {
-              "tabs": {
-                "Combat": {
-                  "order": 1,
-                  "groups": [
-                    {
-                      "name": "Target Lock",
-                      "order": 1, "side": "left",
-                      "elements": [
-                        { "type": "Toggle", "title": "Enable Aimbot", "state": true, "callback_index": -1 },
-                        { "type": "Dropdown", "title": "Aim Mode", "value": "Smart", "options": ["Smart", "Closest Part"], "callback_index": -1 },
-                        { "type": "Dropdown", "title": "Target Priority", "value": "Crosshair", "options": ["Crosshair", "Distance", "Health"], "callback_index": -1 },
-                        { "type": "Toggle", "title": "Team Check", "state": true, "callback_index": -1 },
-                        { "type": "Toggle", "title": "Wall Check", "state": true, "callback_index": -1 },
-                        { "type": "Toggle", "title": "ESP Targets Only", "state": false, "callback_index": -1 },
-                        { "type": "Toggle", "title": "Sound Cue on Lock", "state": true, "callback_index": -1 }
-                      ]
-                    },
-                    {
-                      "name": "Accuracy & Prediction",
-                      "order": 2, "side": "right",
-                      "elements": [
-                        { "type": "Slider", "title": "Hit Chance (%)", "value": 100, "min": 0, "max": 100, "callback_index": -1 },
-                        { "type": "Toggle", "title": "Prediction", "state": true, "callback_index": -1 },
-                        { "type": "Slider", "title": "Prediction Strength", "value": 0.135, "min": 0.05, "max": 0.3, "callback_index": -1 },
-                        { "type": "Toggle", "title": "Smoothing", "state": false, "callback_index": -1 },
-                        { "type": "Slider", "title": "Smooth Speed", "value": 0.3, "min": 0.05, "max": 1, "callback_index": -1 },
-                        { "type": "Slider", "title": "Offset X", "value": 0, "min": -5, "max": 5, "callback_index": -1 },
-                        { "type": "Slider", "title": "Offset Y", "value": 0, "min": -5, "max": 5, "callback_index": -1 }
-                      ]
-                    },
-                    {
-                      "name": "Triggerbot",
-                      "order": 3, "side": "left",
-                      "elements": [
-                        { "type": "Toggle", "title": "Enable Triggerbot", "state": false, "callback_index": -1 },
-                        { "type": "Slider", "title": "Fire Delay (s)", "value": 0.05, "min": 0, "max": 0.5, "callback_index": -1 },
-                        { "type": "Slider", "title": "Trigger Hit Chance (%)", "value": 100, "min": 0, "max": 100, "callback_index": -1 }
-                      ]
-                    },
-                    {
-                      "name": "Hitbox Expander",
-                      "order": 4, "side": "right",
-                      "elements": [
-                        { "type": "Toggle", "title": "Enable Hitboxes", "state": false, "callback_index": -1 },
-                        { "type": "Dropdown", "title": "Target Part", "value": "Head", "options": ["Head", "UpperTorso", "LowerTorso", "HumanoidRootPart"], "callback_index": -1 },
-                        { "type": "Slider", "title": "Hitbox Size", "value": 5, "min": 1, "max": 50, "callback_index": -1 },
-                        { "type": "Slider", "title": "Hitbox Transparency", "value": 0.5, "min": 0, "max": 1, "callback_index": -1 }
-                      ]
-                    }
-                  ]
-                },
-                "Visuals": {
-                  "order": 2,
-                  "groups": [
-                    {
-                      "name": "FOV Circle",
-                      "order": 1, "side": "left",
-                      "elements": [
-                        { "type": "Toggle", "title": "Show FOV Circle", "state": true, "callback_index": -1 },
-                        { "type": "Toggle", "title": "Follow Mouse", "state": true, "callback_index": -1 },
-                        { "type": "Slider", "title": "FOV Radius", "value": 150, "min": 10, "max": 500, "callback_index": -1 },
-                        { "type": "Toggle", "title": "Zoom Scale", "state": true, "callback_index": -1 },
-                        { "type": "Slider", "title": "Thickness", "value": 1.5, "min": 1, "max": 5, "callback_index": -1 },
-                        { "type": "Toggle", "title": "Color Lerp on Lock", "state": true, "callback_index": -1 }
-                      ]
-                    },
-                    {
-                      "name": "Target HUD",
-                      "order": 2, "side": "right",
-                      "elements": [
-                        { "type": "Toggle", "title": "Show Target HUD", "state": true, "callback_index": -1 },
-                        { "type": "Dropdown", "title": "HUD Style", "value": "Top Premium", "options": ["Top Premium", "Bot Competitive", "Top Compact", "Bot Minimalist"], "callback_index": -1 },
-                        { "type": "Slider", "title": "HUD Scale", "value": 1, "min": 0.5, "max": 1.5, "callback_index": -1 }
-                      ]
-                    },
-                    {
-                      "name": "ESP Core",
-                      "order": 3, "side": "left",
-                      "elements": [
-                        { "type": "Toggle", "title": "Enable ESP", "state": false, "callback_index": -1 },
-                        { "type": "Toggle", "title": "Show Boxes", "state": true, "callback_index": -1 },
-                        { "type": "Toggle", "title": "Box Outline", "state": true, "callback_index": -1 },
-                        { "type": "Toggle", "title": "Box Fill", "state": false, "callback_index": -1 },
-                        { "type": "Toggle", "title": "Health Bar", "state": true, "callback_index": -1 },
-                        { "type": "Toggle", "title": "Names", "state": true, "callback_index": -1 },
-                        { "type": "Toggle", "title": "Distance", "state": false, "callback_index": -1 },
-                        { "type": "Toggle", "title": "Weapon", "state": false, "callback_index": -1 }
-                      ]
-                    },
-                    {
-                      "name": "ESP Colors",
-                      "order": 4, "side": "right",
-                      "elements": [
-                        { "type": "Toggle", "title": "Visibility Colors", "state": true, "callback_index": -1 },
-                        { "type": "Toggle", "title": "Team Check", "state": true, "callback_index": -1 },
-                        { "type": "Toggle", "title": "Tracers", "state": false, "callback_index": -1 },
-                        { "type": "Dropdown", "title": "Tracer Origin", "value": "Bottom", "options": ["Bottom", "Center", "Top"], "callback_index": -1 },
-                        { "type": "Dropdown", "title": "Text Case", "value": "UPPERCASE", "options": ["Normal", "UPPERCASE"], "callback_index": -1 },
-                        { "type": "Slider", "title": "Max ESP Distance", "value": 1000, "min": 100, "max": 5000, "callback_index": -1 }
-                      ]
-                    }
-                  ]
-                },
-                "Movement": {
-                  "order": 3,
-                  "groups": [
-                    {
-                      "name": "Player Modifiers",
-                      "order": 1, "side": "left",
-                      "elements": [
-                        { "type": "Toggle", "title": "Speed Hack", "state": false, "callback_index": -1 },
-                        { "type": "Slider", "title": "Walk Speed", "value": 16, "min": 16, "max": 200, "callback_index": -1 },
-                        { "type": "Toggle", "title": "Jump Power Hack", "state": false, "callback_index": -1 },
-                        { "type": "Slider", "title": "Jump Power", "value": 50, "min": 50, "max": 500, "callback_index": -1 },
-                        { "type": "Toggle", "title": "Infinite Jump", "state": false, "callback_index": -1 },
-                        { "type": "Toggle", "title": "Bunny Hop", "state": false, "callback_index": -1 }
-                      ]
-                    },
-                    {
-                      "name": "World & Defense",
-                      "order": 2, "side": "right",
-                      "elements": [
-                        { "type": "Toggle", "title": "Override Lighting", "state": false, "callback_index": -1 },
-                        { "type": "Slider", "title": "Time of Day", "value": 14, "min": 0, "max": 24, "callback_index": -1 },
-                        { "type": "Slider", "title": "Brightness", "value": 2, "min": 0, "max": 5, "callback_index": -1 },
-                        { "type": "Toggle", "title": "Noclip", "state": false, "callback_index": -1 },
-                        { "type": "Toggle", "title": "Spinbot (Anti-Aim)", "state": false, "callback_index": -1 },
-                        { "type": "Slider", "title": "Spin Speed", "value": 20, "min": 1, "max": 100, "callback_index": -1 },
-                        { "type": "Toggle", "title": "Enable Blink to Target", "state": false, "callback_index": -1 }
-                      ]
-                    }
-                  ]
-                },
-                "Config": {
-                  "order": 4,
-                  "groups": [
-                    {
-                      "name": "Performance",
-                      "order": 1, "side": "right",
-                      "elements": [
-                        { "type": "Toggle", "title": "FPS Watermark", "state": true, "callback_index": -1 },
-                        { "type": "Slider", "title": "LOD Distance (m)", "value": 500, "min": 100, "max": 2000, "callback_index": -1 }
-                      ]
-                    }
-                  ]
-                }
-              }
-            }
-          </script>
+    <div class="hw-wrap">
+      <div class="hw-glow"></div>
+      <div class="hw-box">
+        <div class="hw-border"></div>
+        <Obsidian title="kaim" footer="version: 10.1 (Stable)" icon="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/GitHub_Invertocat_Logo.svg/1200px-GitHub_Invertocat_Logo.svg.png">
+          <script type="application/json">{"tabs":{"Combat":{"order":1,"groups":[{"name":"Target Lock","order":1,"side":"left","elements":[{"type":"Toggle","title":"Enable Aimbot","state":true,"callback_index":-1},{"type":"Dropdown","title":"Aim Mode","value":"Smart","options":["Smart","Closest Part"],"callback_index":-1},{"type":"Dropdown","title":"Priority","value":"Crosshair","options":["Crosshair","Distance","Health"],"callback_index":-1},{"type":"Toggle","title":"Team Check","state":true,"callback_index":-1},{"type":"Toggle","title":"Wall Check","state":true,"callback_index":-1},{"type":"Toggle","title":"ESP Targets Only","state":false,"callback_index":-1},{"type":"Toggle","title":"Sound Cue on Lock","state":true,"callback_index":-1},{"type":"Toggle","title":"Notify on Lock","state":false,"callback_index":-1},{"type":"Toggle","title":"Lock Tracer","state":false,"callback_index":-1}]},{"name":"Accuracy","order":2,"side":"right","elements":[{"type":"Slider","title":"Hit Chance (%)","value":100,"min":0,"max":100,"callback_index":-1},{"type":"Toggle","title":"Prediction","state":true,"callback_index":-1},{"type":"Slider","title":"Prediction Strength","value":0.135,"min":0.05,"max":0.3,"callback_index":-1},{"type":"Toggle","title":"Smoothing","state":false,"callback_index":-1},{"type":"Slider","title":"Smooth Speed","value":0.3,"min":0.05,"max":1,"callback_index":-1},{"type":"Slider","title":"Offset X","value":0,"min":-5,"max":5,"callback_index":-1},{"type":"Slider","title":"Offset Y","value":0,"min":-5,"max":5,"callback_index":-1},{"type":"Slider","title":"Offset Z","value":0,"min":-5,"max":5,"callback_index":-1}]},{"name":"Triggerbot","order":3,"side":"left","elements":[{"type":"Toggle","title":"Enable Triggerbot","state":false,"callback_index":-1},{"type":"Slider","title":"Fire Delay (s)","value":0.05,"min":0,"max":0.5,"callback_index":-1},{"type":"Slider","title":"Hit Chance (%)","value":100,"min":0,"max":100,"callback_index":-1},{"type":"Toggle","title":"Team Check","state":true,"callback_index":-1},{"type":"Toggle","title":"Sphere Check","state":true,"callback_index":-1}]},{"name":"Hitbox Expander","order":4,"side":"right","elements":[{"type":"Toggle","title":"Enable Hitboxes","state":false,"callback_index":-1},{"type":"Dropdown","title":"Target Part","value":"Head","options":["Head","UpperTorso","LowerTorso","HumanoidRootPart"],"callback_index":-1},{"type":"Slider","title":"Hitbox Size","value":5,"min":1,"max":50,"callback_index":-1},{"type":"Slider","title":"Transparency","value":0.5,"min":0,"max":1,"callback_index":-1}]}]},"Visuals":{"order":2,"groups":[{"name":"FOV Circle","order":1,"side":"left","elements":[{"type":"Toggle","title":"Show FOV Circle","state":true,"callback_index":-1},{"type":"Toggle","title":"Follow Mouse","state":true,"callback_index":-1},{"type":"Slider","title":"FOV Radius","value":150,"min":10,"max":500,"callback_index":-1},{"type":"Toggle","title":"Zoom Scale","state":true,"callback_index":-1},{"type":"Slider","title":"Thickness","value":1.5,"min":1,"max":5,"callback_index":-1},{"type":"Toggle","title":"Color Lerp on Lock","state":true,"callback_index":-1},{"type":"Toggle","title":"Filled","state":false,"callback_index":-1}]},{"name":"Target HUD","order":2,"side":"right","elements":[{"type":"Toggle","title":"Show Target HUD","state":true,"callback_index":-1},{"type":"Dropdown","title":"HUD Style","value":"Top Premium","options":["Top Premium","Bot Competitive","Top Compact","Bot Minimalist"],"callback_index":-1},{"type":"Slider","title":"HUD Scale","value":1,"min":0.5,"max":1.5,"callback_index":-1}]},{"name":"ESP Core","order":3,"side":"left","elements":[{"type":"Toggle","title":"Enable ESP","state":false,"callback_index":-1},{"type":"Toggle","title":"Show Boxes","state":true,"callback_index":-1},{"type":"Toggle","title":"Box Outline","state":true,"callback_index":-1},{"type":"Toggle","title":"Box Fill","state":false,"callback_index":-1},{"type":"Toggle","title":"Health Bar","state":true,"callback_index":-1},{"type":"Toggle","title":"Names","state":true,"callback_index":-1},{"type":"Toggle","title":"Distance","state":false,"callback_index":-1},{"type":"Toggle","title":"Weapon","state":false,"callback_index":-1},{"type":"Toggle","title":"Tracers","state":false,"callback_index":-1}]},{"name":"ESP Colors","order":4,"side":"right","elements":[{"type":"Toggle","title":"Visibility Colors","state":true,"callback_index":-1},{"type":"Toggle","title":"Team Check","state":true,"callback_index":-1},{"type":"Toggle","title":"Show Teammates","state":false,"callback_index":-1},{"type":"Dropdown","title":"Text Case","value":"UPPERCASE","options":["Normal","UPPERCASE"],"callback_index":-1},{"type":"Slider","title":"Max Distance","value":1000,"min":100,"max":5000,"callback_index":-1},{"type":"Slider","title":"Text Size","value":14,"min":8,"max":24,"callback_index":-1}]}]},"Movement":{"order":3,"groups":[{"name":"Player Modifiers","order":1,"side":"left","elements":[{"type":"Toggle","title":"Speed Hack","state":false,"callback_index":-1},{"type":"Slider","title":"Walk Speed","value":16,"min":16,"max":200,"callback_index":-1},{"type":"Toggle","title":"Jump Power","state":false,"callback_index":-1},{"type":"Slider","title":"Jump Power","value":50,"min":50,"max":500,"callback_index":-1},{"type":"Toggle","title":"Infinite Jump","state":false,"callback_index":-1},{"type":"Toggle","title":"Bunny Hop","state":false,"callback_index":-1}]},{"name":"World & Defense","order":2,"side":"right","elements":[{"type":"Toggle","title":"Override Lighting","state":false,"callback_index":-1},{"type":"Slider","title":"Time of Day","value":14,"min":0,"max":24,"callback_index":-1},{"type":"Slider","title":"Brightness","value":2,"min":0,"max":5,"callback_index":-1},{"type":"Toggle","title":"Noclip","state":false,"callback_index":-1},{"type":"Toggle","title":"Spinbot","state":false,"callback_index":-1},{"type":"Slider","title":"Spin Speed","value":20,"min":1,"max":100,"callback_index":-1},{"type":"Toggle","title":"Enable Blink","state":false,"callback_index":-1},{"type":"Toggle","title":"Camera FOV","state":false,"callback_index":-1},{"type":"Slider","title":"FOV","value":70,"min":10,"max":120,"callback_index":-1}]}]},"Config":{"order":4,"groups":[{"name":"Performance","order":1,"side":"right","elements":[{"type":"Toggle","title":"FPS Watermark","state":true,"callback_index":-1},{"type":"Slider","title":"LOD Distance (m)","value":500,"min":100,"max":2000,"callback_index":-1},{"type":"Toggle","title":"Game Profiles","state":false,"callback_index":-1}]}]}}}</script>
         </Obsidian>
       </div>
-      <div class="widget-caption">⚡ Interactive — click tabs and toggles to explore</div>
+      <div class="hw-caption">⚡ Interactive — click tabs & toggles to explore the full UI</div>
     </div>
   </div>
 </section>
 
 <!-- TICKER -->
-<div class="ticker">
-  <div class="ticker-track" id="ticker-track"></div>
+<div class="ticker"><div class="ticker-t" id="ticker-t"></div></div>
+
+<!-- STATS STRIPE -->
+<div class="stripe">
+  <div class="stripe-in">
+    <div class="stripe-item"><div class="stripe-ico" style="background:rgba(109,91,239,.1);border:1px solid rgba(109,91,239,.18)">🎯</div><div><div class="stripe-val">Lua 5.1</div><div class="stripe-lbl">Language</div></div></div>
+    <div class="stripe-div"></div>
+    <div class="stripe-item"><div class="stripe-ico" style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.18)">💻</div><div><div class="stripe-val">PC Only</div><div class="stripe-lbl">Platform</div></div></div>
+    <div class="stripe-div"></div>
+    <div class="stripe-item"><div class="stripe-ico" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.18)">⚡</div><div><div class="stripe-val">1 Line</div><div class="stripe-lbl">Setup</div></div></div>
+    <div class="stripe-div"></div>
+    <div class="stripe-item"><div class="stripe-ico" style="background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.18)">🔄</div><div><div class="stripe-val">Auto-Updated</div><div class="stripe-lbl">From GitHub</div></div></div>
+    <div class="stripe-div"></div>
+    <div class="stripe-item"><div class="stripe-ico" style="background:rgba(236,72,153,.1);border:1px solid rgba(236,72,153,.18)">📦</div><div><div class="stripe-val" id="stripe-vers">9+</div><div class="stripe-lbl">Versions</div></div></div>
+  </div>
 </div>
 
 <!-- FEATURES -->
-<section class="section" id="features">
-  <div class="section-inner">
-    <div class="sr" style="margin-bottom:48px">
-      <div class="section-label">Features</div>
-      <div class="section-title">Everything you need.<br>Nothing you don't.</div>
-      <div class="section-desc">Built lean, runs fast. Every feature is here for a reason.</div>
-    </div>
-    <div class="bento">
-      <div class="bento-card sr sr-d1">
-        <div class="bento-icon">🎯</div>
-        <h3>Single-Lock Targeting</h3>
-        <p>Once you press your aim key and the script locks onto a valid target, it will never switch to another player as long as you hold that key down. Release and re-press to acquire a new target.</p>
-      </div>
-      <div class="bento-card sr sr-d2">
-        <div class="bento-icon">⚡</div>
-        <h3>One-Line Activation</h3>
-        <p>A single <code style="font-family:'JetBrains Mono';font-size:12px;color:var(--accent2);background:rgba(99,102,241,0.1);padding:2px 6px;border-radius:4px">loadstring</code> command is all it takes. Paste into any executor and run — zero setup required.</p>
-      </div>
-      <div class="bento-card sr sr-d3">
-        <div class="bento-icon">🛡️</div>
-        <h3>Zero-Bridge Engine</h3>
-        <p>Every Drawing API call is intercepted by a Lua-side proxy cache. The C++ engine is only contacted when a property actually changes, reducing bridge overhead by over 90%.</p>
-      </div>
-      <div class="bento-card bento-wide sr sr-d4">
-        <div>
-          <div class="bento-icon">🔄</div>
-          <h3>Always Up to Date</h3>
-          <p style="font-size:15px;max-width:400px">This page fetches live data from the GitHub API every time it loads. The file tree, version names, and script URLs all update automatically the moment you push a new file.</p>
-          <div class="sync-badge"><div class="sync-spin"></div>Live-synced from sdwird/kaim</div>
-        </div>
-        <div class="wide-visual">
-          <div class="wv-line"><span class="d d-g"></span><span>fetching sdwird/kaim tree…</span></div>
-          <div class="wv-line"><span class="d d-a"></span><span>sorting versions by semver…</span></div>
-          <div class="wv-line"><span class="d d-p"></span><span>latest detected: <em id="wv-ver" style="font-style:normal;color:var(--accent2)">—</em></span></div>
-          <div class="wv-line"><span class="d d-g"></span><span>code blocks updated ✓</span></div>
-          <div class="wv-line"><span class="d d-g"></span><span>file tree rendered ✓</span></div>
-        </div>
-      </div>
-      <div class="bento-card sr sr-d5">
-        <div class="bento-icon">📦</div>
-        <h3>4 HUD Styles</h3>
-        <p>Premium, Competitive, Compact, or Minimalist. All styles share the same 15 drawing objects — zero garbage collection stutter from style switching.</p>
-      </div>
-      <div class="bento-card sr sr-d6">
-        <div class="bento-icon">🔀</div>
-        <h3>Stable & Experimental</h3>
-        <p>Two release tracks. The stable build for reliability, the experimental build for cutting-edge updates. Both auto-detected from GitHub.</p>
+<section class="sec" id="features"><div class="sec-i">
+  <div class="sr" style="margin-bottom:52px"><div class="sec-lbl">Features</div><div class="sec-h">Everything you need.<br>Nothing you don't.</div><div class="sec-p">Built lean, runs fast. Every feature exists for a reason.</div></div>
+  <div class="bento">
+    <div class="bc sr sr-d1"><div class="bc-icon">🎯</div><h3>Single-Lock Targeting</h3><p>Once you press your aim key and lock onto a target, it never switches. Even if a closer player walks into your crosshair. Release and re-press to re-acquire.</p></div>
+    <div class="bc sr sr-d2"><div class="bc-icon">⚡</div><h3>One-Line Activation</h3><p>A single <code style="font-family:'JetBrains Mono';font-size:12px;color:var(--accent2);background:rgba(109,91,239,.1);padding:2px 6px;border-radius:4px">loadstring</code> command is all it takes. Paste into any executor and run — zero setup.</p></div>
+    <div class="bc sr sr-d3"><div class="bc-icon">🛡️</div><h3>Zero-Bridge Engine</h3><p>Every Drawing API call is intercepted by a Lua-side proxy cache. The C++ engine is only contacted when a value actually changes — 90%+ overhead reduction.</p></div>
+    <div class="bc bc-wide sr sr-d4">
+      <div><div class="bc-icon">🔄</div><h3>Always Up to Date</h3><p style="font-size:15px;max-width:400px">This page fetches live data from the GitHub API every time it loads. Version names, loadstring URLs, and the file tree all update automatically.</p><div class="sync-b"><div class="sync-sp"></div>Live-synced from sdwird/kaim</div></div>
+      <div class="wv">
+        <div class="wv-l"><span class="d d-g"></span><span>fetching sdwird/kaim tree…</span></div>
+        <div class="wv-l"><span class="d d-a"></span><span>sorting versions by semver…</span></div>
+        <div class="wv-l"><span class="d d-p"></span><span>latest: <em id="wv-ver" style="font-style:normal;color:var(--accent2)">—</em></span></div>
+        <div class="wv-l"><span class="d d-g"></span><span>code blocks updated ✓</span></div>
+        <div class="wv-l"><span class="d d-g"></span><span>file tree rendered ✓</span></div>
       </div>
     </div>
+    <div class="bc sr sr-d5"><div class="bc-icon">📦</div><h3>4 Target HUD Styles</h3><p>Premium, Competitive, Compact, Minimalist. All share the same 15 drawing objects — zero GC stutter from live style switching.</p></div>
+    <div class="bc sr sr-d6"><div class="bc-icon">🔀</div><h3>Stable & Experimental</h3><p>Two release tracks auto-detected from your repo. The stable build for reliability, the experimental build for cutting-edge updates.</p></div>
   </div>
-</section>
+</div></section>
 
 <!-- TERMINAL -->
-<section class="section" id="terminal" style="padding-top:0">
-  <div class="section-inner sr">
-    <div style="margin-bottom:48px">
-      <div class="section-label">In Action</div>
-      <div class="section-title">Watch it load</div>
-      <div class="section-desc">What happens when you execute kaim in your executor.</div>
-    </div>
-    <div class="terminal">
-      <div class="term-bar">
-        <div class="term-dots"><i class="td-r"></i><i class="td-y"></i><i class="td-g"></i></div>
-        <span class="term-title">kaim executor — Lua 5.1</span>
-        <div style="width:40px"></div>
-      </div>
-      <div class="term-body" id="term-body"><span class="t-cursor"></span></div>
-    </div>
-  </div>
-</section>
+<section class="sec" id="terminal" style="padding-top:0"><div class="sec-i sr">
+  <div style="margin-bottom:52px"><div class="sec-lbl">In Action</div><div class="sec-h">Watch it load</div><div class="sec-p">What happens when you execute kaim in your executor.</div></div>
+  <div class="term"><div class="term-bar"><div class="term-dots"><i class="td-r"></i><i class="td-y"></i><i class="td-g"></i></div><span class="term-ti">kaim executor — Lua 5.1</span><div style="width:40px"></div></div><div class="term-b" id="term-b"><span class="t-cursor"></span></div></div>
+</div></section>
 
 <!-- ARCHITECTURE -->
-<section class="section" id="arch" style="background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
-  <div class="section-inner">
-    <div class="sr" style="margin-bottom:48px;text-align:center">
-      <div class="section-label" style="justify-content:center">Engine Architecture</div>
-      <div class="section-title">Built for Performance</div>
-      <div class="section-desc" style="margin:14px auto 0">kaim isn't just an aimbot. It's a meticulously optimized Lua engine built to bypass common execution limits while maintaining flawless frame rates.</div>
-    </div>
-    <div class="arch-grid">
-
-      <div class="arch-card sr sr-d1">
-        <div class="arch-num" style="color:#22c55e;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2)">01</div>
-        <h3>Zero-Bridge Drawing Proxy</h3>
-        <p>Most scripts update the C++ Drawing API every single frame, causing severe memory bridging latency and inevitable micro-stutters that compound during intense fights.</p>
-        <div class="arch-detail">The custom <strong>ND()</strong> proxy caches all properties locally in a Lua table. On each <strong>__newindex</strong> call, it compares the new value against the cached one. Only when they differ does it dispatch the update across the Lua→C++ bridge. This eliminates <strong>90%+ of redundant bridge calls</strong>, keeping frame times rock-solid even with 20+ ESP objects on screen.</div>
-      </div>
-
-      <div class="arch-card sr sr-d2">
-        <div class="arch-num" style="color:#f59e0b;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2)">02</div>
-        <h3>Raycast Allocation Caching</h3>
-        <p>"Smart Mode" checks up to 6 different body parts per player per frame. Standard aimbots instantiate a new filter array for each check, flooding the garbage collector.</p>
-        <div class="arch-detail">Kaim caches the <strong>FilterDescendantsInstances</strong> array via a <strong>_lastVisChar</strong> reference. If the current character matches the last one checked, the script reuses the identical C++ allocation across all 6 body part raycasts. This cuts allocation costs by <strong>6x per player per frame</strong> and drastically reduces GC pressure.</div>
-      </div>
-
-      <div class="arch-card sr sr-d3">
-        <div class="arch-num" style="color:#6366f1;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2)">03</div>
-        <h3>Global Descendant Pre-Pass</h3>
-        <p>To prevent crashes when a player dies, the script checks if their character still exists in the workspace. Standard scripts do this check separately in ESP, Aiming, and HUD code.</p>
-        <div class="arch-detail">Kaim runs <strong>IsDescendantOf(workspace)</strong> exactly <strong>once per player per frame</strong> during the pre-computation loop. The boolean result is cached to <strong>cd._wsValid</strong> and consumed by all downstream systems. This halves the overhead of workspace verification across the entire pipeline.</div>
-      </div>
-
-      <div class="arch-card sr sr-d4">
-        <div class="arch-num" style="color:#ec4899;background:rgba(236,72,153,0.1);border:1px solid rgba(236,72,153,0.2)">04</div>
-        <h3>Heartbeat Hitbox Bypass</h3>
-        <p>Nested loops checking thousands of parts on Heartbeat will instantly tank your FPS. Even when the hitbox expander is off, most scripts still iterate every frame.</p>
-        <div class="arch-detail">Kaim implements a strict <strong>_hbActive</strong> state flag. When the Hitbox Expander is disabled and all parts have been restored, the script permanently halts all hitbox math on Heartbeat. It executes <strong>zero code</strong> per physics tick until you explicitly re-enable the feature — saving precious CPU budget for other systems.</div>
-      </div>
-
-      <div class="arch-card arch-full sr sr-d5">
-        <div>
-          <div class="arch-num" style="color:#22d3ee;background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.2)">05</div>
-          <h3>Dynamic Target HUD Engine</h3>
-          <p>4 unique layouts (Premium, Competitive, Compact, Minimalist) that feel completely different but share one unified rendering engine underneath.</p>
-          <div class="arch-detail">Instead of creating/destroying drawing objects when swapping styles, the HUD recycles the <strong>exact same 15 drawing objects</strong>. Unused elements are hidden through the proxy's visibility flag rather than deleted, guaranteeing <strong>zero GC stutter</strong> during live style switches. The proxy's <strong>__index fallback</strong> safely queries C++ properties like <strong>TextBounds</strong> for pixel-perfect right-alignment without expensive string math.</div>
-        </div>
-        <div class="arch-code">
-          <span class="cm">-- Zero-Bridge Proxy Core</span><br>
-          <span class="kw">local function</span> <span class="fn">ND</span>(t)<br>
-          &nbsp;&nbsp;<span class="kw">local</span> obj = Drawing.new(t)<br>
-          &nbsp;&nbsp;<span class="kw">local</span> cache = {<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;Visible = <span class="kw">false</span>,<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;Color = Color3.new(),<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;Size = <span class="num">12</span>,<br>
-          &nbsp;&nbsp;}<br>
-          &nbsp;&nbsp;<span class="kw">return</span> setmetatable({}, {<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;__newindex = <span class="kw">function</span>(_, k, v)<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> cache[k] ~= v <span class="kw">then</span><br>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cache[k] = v<br>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;obj[k] = v  <span class="cm">-- bridge call</span><br>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">end</span><br>
-          &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">end</span>,<br>
-          &nbsp;&nbsp;})<br>
-          <span class="kw">end</span>
-        </div>
-      </div>
-
+<section class="sec" id="arch" style="background:var(--s1);border-top:1px solid var(--b1);border-bottom:1px solid var(--b1)"><div class="sec-i">
+  <div class="sr" style="margin-bottom:52px;text-align:center"><div class="sec-lbl" style="justify-content:center">Engine Architecture</div><div class="sec-h">Built for Performance</div><div class="sec-p" style="margin:14px auto 0">kaim isn't just an aimbot. It's a meticulously optimized Lua engine pushing Roblox executors to their absolute limits.</div></div>
+  <div class="arch-g">
+    <div class="ac sr sr-d1"><div class="ac-num" style="color:var(--green);background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2)">01</div><h3>Zero-Bridge Drawing Proxy</h3><p>Most scripts update Drawing API objects every frame, causing severe Lua→C++ bridging latency.</p><div class="ac-detail">The custom <strong>ND()</strong> proxy caches all properties in a Lua table. On each <strong>__newindex</strong> call, it compares new values against cached ones. Only diffs cross the bridge — eliminating <strong>90%+ of redundant C++ calls</strong>. Even with 20+ ESP objects, frame times stay rock-solid.</div></div>
+    <div class="ac sr sr-d2"><div class="ac-num" style="color:var(--amber);background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2)">02</div><h3>Raycast Allocation Caching</h3><p>"Smart Mode" checks up to 6 body parts per player per frame. Each check normally allocates a new filter array.</p><div class="ac-detail">Kaim caches the <strong>FilterDescendantsInstances</strong> array via <strong>_lastVisChar</strong>. If the character matches the last one checked, the exact same C++ allocation is reused across all 6 raycasts — cutting allocation costs by <strong>6x per player per frame</strong>.</div></div>
+    <div class="ac sr sr-d3"><div class="ac-num" style="color:var(--accent);background:rgba(109,91,239,.1);border:1px solid rgba(109,91,239,.2)">03</div><h3>Global Descendant Pre-Pass</h3><p>Workspace existence checks prevent crashes but create overhead when duplicated across ESP, Aim, and HUD systems.</p><div class="ac-detail">Kaim runs <strong>IsDescendantOf(workspace)</strong> exactly <strong>once per player per frame</strong> during the pre-computation loop. The result is cached to <strong>cd._wsValid</strong> and consumed by all downstream systems, halving verification overhead.</div></div>
+    <div class="ac sr sr-d4"><div class="ac-num" style="color:var(--pink);background:rgba(236,72,153,.1);border:1px solid rgba(236,72,153,.2)">04</div><h3>Heartbeat Hitbox Bypass</h3><p>Nested loops checking thousands of parts on Heartbeat will instantly tank FPS, even when the feature is disabled.</p><div class="ac-detail">A strict <strong>_hbActive</strong> state flag ensures that when the Hitbox Expander is off and parts are restored, the script executes <strong>zero code per physics tick</strong> until you explicitly re-enable the feature.</div></div>
+    <div class="ac ac-full sr sr-d5">
+      <div><div class="ac-num" style="color:var(--cyan);background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.2)">05</div><h3>Dynamic Target HUD Engine</h3><p>4 unique layouts that feel completely different but share one unified rendering engine.</p><div class="ac-detail">Instead of creating/destroying drawing objects when swapping styles, the HUD recycles the <strong>exact same 15 objects</strong>. Unused elements are hidden via the proxy's visibility flag. The proxy's <strong>__index fallback</strong> safely queries C++ properties like <strong>TextBounds</strong> for pixel-perfect alignment without string math.</div></div>
+      <div class="ac-code"><span class="cm">-- Zero-Bridge Proxy Core</span><br><span class="kw">local function</span> <span class="fn">ND</span>(t)<br>&nbsp;&nbsp;<span class="kw">local</span> obj = Drawing.new(t)<br>&nbsp;&nbsp;<span class="kw">local</span> cache = {<br>&nbsp;&nbsp;&nbsp;&nbsp;Visible = <span class="kw">false</span>,<br>&nbsp;&nbsp;&nbsp;&nbsp;Color = Color3.new(),<br>&nbsp;&nbsp;&nbsp;&nbsp;Size = <span class="num">12</span>,<br>&nbsp;&nbsp;}<br>&nbsp;&nbsp;<span class="kw">return</span> setmetatable({}, {<br>&nbsp;&nbsp;&nbsp;&nbsp;__newindex = <span class="kw">function</span>(_, k, v)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> cache[k] ~= v <span class="kw">then</span><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cache[k] = v<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;obj[k] = v  <span class="cm">-- only diff</span><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">end</span><br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">end</span>,<br>&nbsp;&nbsp;})<br><span class="kw">end</span></div>
     </div>
   </div>
-</section>
+</div></section>
+
+<!-- COMPARISON TABLE -->
+<section class="sec" id="compare"><div class="sec-i">
+  <div class="sr" style="margin-bottom:52px;text-align:center"><div class="sec-lbl" style="justify-content:center">Comparison</div><div class="sec-h">kaim vs. the rest</div><div class="sec-p" style="margin:14px auto 0">See how kaim stacks up against typical Roblox aimbot scripts.</div></div>
+  <div class="sr" style="overflow-x:auto">
+    <table class="cmp-table">
+      <thead><tr><th>Feature</th><th class="cmp-kaim">kaim (Obsidian)</th><th>Typical Script</th></tr></thead>
+      <tbody>
+        <tr><td>Zero-Bridge Drawing Proxy</td><td class="cmp-check">✓</td><td class="cmp-x">✗</td></tr>
+        <tr><td>Raycast Allocation Caching</td><td class="cmp-check">✓</td><td class="cmp-x">✗</td></tr>
+        <tr><td>Single-Lock Aim (no target switching)</td><td class="cmp-check">✓</td><td class="cmp-x">✗</td></tr>
+        <tr><td>4 Target HUD Styles</td><td class="cmp-check">✓</td><td class="cmp-x">✗</td></tr>
+        <tr><td>Heartbeat Bypass when Idle</td><td class="cmp-check">✓</td><td class="cmp-x">✗</td></tr>
+        <tr><td>Smart Multi-Part Aim Mode</td><td class="cmp-check">✓</td><td>Partial</td></tr>
+        <tr><td>ESP + Tracers + Health Bars</td><td class="cmp-check">✓</td><td class="cmp-check">✓</td></tr>
+        <tr><td>Config Save/Load System</td><td class="cmp-check">✓</td><td>Partial</td></tr>
+        <tr><td>Modern UI Library</td><td class="cmp-kaim">Obsidian</td><td>Basic / None</td></tr>
+        <tr><td>Triggerbot with Sphere Check</td><td class="cmp-check">✓</td><td class="cmp-x">✗</td></tr>
+        <tr><td>Auto-Update from GitHub</td><td class="cmp-check">✓</td><td class="cmp-x">✗</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div></section>
 
 <!-- INSTALL -->
-<section class="section" id="install">
-  <div class="section-inner">
-    <div class="sr" style="text-align:center;margin-bottom:48px">
-      <div class="section-label" style="justify-content:center">Get the Script</div>
-      <div class="section-title">Choose Your Build</div>
-      <div class="section-desc" style="margin:14px auto 0;display:flex;align-items:center;justify-content:center;gap:10px">
-        <span style="position:relative;display:flex;width:10px;height:10px"><span style="animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;position:absolute;inset:0;border-radius:50%;background:var(--green);opacity:0.6"></span><span style="position:relative;display:block;width:10px;height:10px;border-radius:50%;background:var(--green)"></span></span>
-        Live-synced from GitHub. Always current.
-      </div>
+<section class="sec" id="install"><div class="sec-i">
+  <div class="sr" style="text-align:center;margin-bottom:52px">
+    <div class="sec-lbl" style="justify-content:center">Get the Script</div>
+    <div class="sec-h">Choose Your Build</div>
+    <div class="sec-p" style="margin:14px auto 0;display:flex;align-items:center;justify-content:center;gap:10px"><span style="position:relative;display:flex;width:10px;height:10px"><span style="animation:ping 1.5s cubic-bezier(0,0,.2,1) infinite;position:absolute;inset:0;border-radius:50%;background:var(--green);opacity:.6"></span><span style="position:relative;display:block;width:10px;height:10px;border-radius:50%;background:var(--green)"></span></span>Live-synced from GitHub</div>
+  </div>
+  <div class="inst-g">
+    <div class="inst-c feat sr sr-d1">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px"><div><h3 style="font-size:24px;font-weight:700;color:#fff;margin-bottom:6px">Experimental</h3><p style="font-size:14px;color:var(--muted)">Latest features and cutting-edge modules.</p></div><span class="inst-badge" id="exp-badge" style="color:var(--accent2);background:rgba(109,91,239,.12);border:1px solid rgba(109,91,239,.2)">—</span></div>
+      <div class="inst-code"><span class="fn">loadstring</span>(<span class="kw">game</span>:<span class="fn">HttpGet</span>(<span class="st" id="exp-url">"fetching..."</span>))()</div>
+      <button class="inst-btn inst-btn-p" id="btn-exp">Copy Loadstring</button>
     </div>
-    <div class="install-grid">
-      <!-- Experimental -->
-      <div class="install-card featured sr sr-d1">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
-          <div>
-            <h3 style="font-size:22px;font-weight:700;color:#fff;margin-bottom:6px">Experimental</h3>
-            <p style="font-size:14px;color:var(--muted)">Latest features and modules.</p>
-          </div>
-          <span class="install-badge" id="exp-badge" style="color:var(--accent2);background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.2)">—</span>
-        </div>
-        <div class="install-code"><span class="fn">loadstring</span>(<span class="kw">game</span>:<span class="fn">HttpGet</span>(<span class="st" id="exp-url">"fetching..."</span>))()</div>
-        <button class="install-btn install-btn-primary" id="btn-exp">Copy Loadstring</button>
-      </div>
-      <!-- Stable -->
-      <div class="install-card sr sr-d2">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
-          <div>
-            <h3 style="font-size:22px;font-weight:700;color:#fff;margin-bottom:6px">Stable</h3>
-            <p style="font-size:14px;color:var(--muted)">Tested and reliable for competitive play.</p>
-          </div>
-          <span class="install-badge" id="stable-badge" style="color:var(--green);background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.18)">—</span>
-        </div>
-        <div class="install-code"><span class="fn">loadstring</span>(<span class="kw">game</span>:<span class="fn">HttpGet</span>(<span class="st" id="stable-url">"fetching..."</span>))()</div>
-        <button class="install-btn install-btn-ghost" id="btn-stable">Copy Loadstring</button>
-      </div>
+    <div class="inst-c sr sr-d2">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px"><div><h3 style="font-size:24px;font-weight:700;color:#fff;margin-bottom:6px">Stable</h3><p style="font-size:14px;color:var(--muted)">Tested and optimized for competitive play.</p></div><span class="inst-badge" id="stable-badge" style="color:var(--green);background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.18)">—</span></div>
+      <div class="inst-code"><span class="fn">loadstring</span>(<span class="kw">game</span>:<span class="fn">HttpGet</span>(<span class="st" id="stable-url">"fetching..."</span>))()</div>
+      <button class="inst-btn inst-btn-g" id="btn-stable">Copy Loadstring</button>
     </div>
   </div>
-</section>
+</div></section>
 
 <!-- STEPS -->
-<section class="section" style="padding-top:0">
-  <div class="section-inner">
-    <div class="sr" style="margin-bottom:48px">
-      <div class="section-label">How to Run</div>
-      <div class="section-title">Three steps to activate</div>
-    </div>
-    <div class="steps-grid">
-      <div class="step-card sr sr-d1">
-        <div class="step-num">01</div>
-        <h4>Open your executor</h4>
-        <p>Launch any compatible Lua executor on your PC. Mobile is not supported.</p>
-      </div>
-      <div class="step-card sr sr-d2">
-        <div class="step-num">02</div>
-        <h4>Choose a release</h4>
-        <p>Grab the Stable build for reliability or Experimental for the latest features above.</p>
-      </div>
-      <div class="step-card sr sr-d3">
-        <div class="step-num">03</div>
-        <h4>Paste & execute</h4>
-        <p>Paste the <code>loadstring</code> into your executor and run. The aimbot activates automatically.</p>
-      </div>
-    </div>
+<section class="sec" style="padding-top:0"><div class="sec-i">
+  <div class="sr" style="margin-bottom:52px"><div class="sec-lbl">How to Run</div><div class="sec-h">Three steps to activate</div></div>
+  <div class="steps-g">
+    <div class="sc sr sr-d1"><div class="sc-num">01</div><h4>Open your executor</h4><p>Launch any compatible Lua executor on your PC. Mobile is not supported.</p></div>
+    <div class="sc sr sr-d2"><div class="sc-num">02</div><h4>Choose a release</h4><p>Grab the Stable build for reliability or Experimental for the latest features above.</p></div>
+    <div class="sc sr sr-d3"><div class="sc-num">03</div><h4>Paste & execute</h4><p>Paste the <code>loadstring</code> into your executor and run. Aimbot activates automatically.</p></div>
   </div>
-</section>
+</div></section>
+
+<!-- FILE TREE -->
+<section class="sec" id="tree" style="background:var(--s1);border-top:1px solid var(--b1);border-bottom:1px solid var(--b1)"><div class="sec-i">
+  <div class="sr" style="margin-bottom:52px"><div class="sec-lbl">Repository</div><div class="sec-h">Project files</div><div class="sec-p">Pulled live from GitHub. Updates automatically whenever new files are pushed.</div></div>
+  <div class="sr" style="display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap">
+    <div style="flex:1;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--dim)">sdwird/kaim · <em id="fcount" style="font-style:normal;color:var(--accent2)">loading…</em></div>
+    <input class="tree-search" type="text" placeholder="filter files…" id="tsrch" oninput="filterTree(this.value)" autocomplete="off"/>
+  </div>
+  <div class="tree-box sr" id="tbox"><div class="tree-load"><div class="tree-spin"></div>Fetching from GitHub…</div></div>
+</div></section>
+
+<!-- CHANGELOG -->
+<section class="sec" id="changelog"><div class="sec-i">
+  <div class="sr" style="margin-bottom:52px"><div class="sec-lbl">Changelog</div><div class="sec-h">Recent updates</div><div class="sec-p">Track what's changed across kaim versions.</div></div>
+  <div class="cl-timeline sr" style="max-width:700px">
+    <div class="cl-item"><div class="cl-dot"></div><div class="cl-ver">v10.2 <span class="cl-badge" style="background:rgba(245,158,11,.12);color:var(--amber)">Experimental</span></div><div class="cl-date">June 2026</div><ul class="cl-list"><li>Blink to Target gated behind master toggle (OFF by default)</li><li>Ghost-click prevention for KeyCode.Unknown inputs</li><li>Target HUD readability improvements across all 4 styles</li><li>Text size scaling increased for better visibility</li></ul></div>
+    <div class="cl-item"><div class="cl-dot"></div><div class="cl-ver">v10.1 <span class="cl-badge" style="background:rgba(34,197,94,.12);color:var(--green)">Stable</span></div><div class="cl-date">June 2026</div><ul class="cl-list"><li>Full Obsidian UI migration (replaced WindUI)</li><li>Zero-Bridge Drawing Proxy engine</li><li>Raycast allocation caching (_lastVisChar)</li><li>Heartbeat hitbox bypass (_hbActive flag)</li><li>Global descendant pre-pass (cd._wsValid)</li><li>4 Target HUD styles (Premium, Competitive, Compact, Minimalist)</li><li>Smart aim mode with 6-point body part visibility checks</li></ul></div>
+    <div class="cl-item"><div class="cl-dot"></div><div class="cl-ver">v8.8</div><div class="cl-date">May 2026</div><ul class="cl-list"><li>ESP performance overhaul</li><li>Added triggerbot with sphere check</li><li>WindUI configuration saving</li></ul></div>
+    <div class="cl-item"><div class="cl-dot"></div><div class="cl-ver">v8.2</div><div class="cl-date">April 2026</div><ul class="cl-list"><li>Legacy stable release</li><li>Hitbox expander</li><li>Basic ESP (boxes, names, health bars)</li></ul></div>
+  </div>
+</div></section>
+
+<!-- FAQ -->
+<section class="sec" style="background:var(--s1);border-top:1px solid var(--b1);border-bottom:1px solid var(--b1)"><div class="sec-i">
+  <div class="sr" style="margin-bottom:52px;text-align:center"><div class="sec-lbl" style="justify-content:center">FAQ</div><div class="sec-h">Common questions</div></div>
+  <div style="max-width:760px;margin:0 auto">
+    <div class="faq-item sr sr-d1"><div class="faq-q" onclick="toggleFaq(this)">Does kaim work on mobile?<span class="faq-arrow">▾</span></div><div class="faq-a"><p>No. kaim requires a Lua executor with Drawing API support, which is only available on PC-based executors. Mobile executors do not support the Drawing library.</p></div></div>
+    <div class="faq-item sr sr-d2"><div class="faq-q" onclick="toggleFaq(this)">Why did my config break after updating?<span class="faq-arrow">▾</span></div><div class="faq-a"><p>Major version jumps (like v8 → v10) change the internal state structure significantly. Old config files become incompatible. Simply delete your old config file and create a fresh one.</p></div></div>
+    <div class="faq-item sr sr-d3"><div class="faq-q" onclick="toggleFaq(this)">What is the Zero-Bridge Drawing Proxy?<span class="faq-arrow">▾</span></div><div class="faq-a"><p>It's a custom Lua-side caching layer that sits between your script and the executor's C++ Drawing API. Instead of sending every property update every frame, it only sends values that have actually changed — reducing bridge overhead by over 90% and keeping your FPS smooth.</p></div></div>
+    <div class="faq-item sr sr-d4"><div class="faq-q" onclick="toggleFaq(this)">What's the difference between Stable and Experimental?<span class="faq-arrow">▾</span></div><div class="faq-a"><p>The Stable build (currently v10.1) has been thoroughly tested and is recommended for competitive play. The Experimental build (v10.2) contains the latest features and fixes but may have untested edge cases.</p></div></div>
+    <div class="faq-item sr sr-d5"><div class="faq-q" onclick="toggleFaq(this)">How does Single-Lock Aiming work?<span class="faq-arrow">▾</span></div><div class="faq-a"><p>Once you hold your aim key and the script locks onto a player, it will never switch targets — even if a closer or "better" target appears. You must release and re-press the aim key to acquire a new target. This prevents accidental target switching during fights.</p></div></div>
+    <div class="faq-item sr sr-d6"><div class="faq-q" onclick="toggleFaq(this)">Can I use kaim in any Roblox game?<span class="faq-arrow">▾</span></div><div class="faq-a"><p>kaim is designed as a universal aimbot script. It works in any game that uses standard Roblox character models with Humanoids. Some games with heavily custom character systems may require tweaking.</p></div></div>
+  </div>
+</div></section>
 
 <!-- FOOTER -->
 <footer>
   <div class="f-logo">kaim</div>
-  <div class="f-links">
-    <a href="https://github.com/sdwird/kaim" target="_blank">GitHub</a>
-    <a href="https://github.com/sdwird" target="_blank">sdwird</a>
-    <a href="#install">Get Script</a>
-    <a href="#" onclick="scrollTo({top:0,behavior:'smooth'});return false">↑ Top</a>
-  </div>
+  <div class="f-links"><a href="https://github.com/sdwird/kaim" target="_blank">GitHub</a><a href="https://github.com/sdwird" target="_blank">sdwird</a><a href="#install">Get Script</a><a href="#arch">Architecture</a><a href="#changelog">Changelog</a><a href="#" onclick="scrollTo({top:0,behavior:'smooth'});return false">↑ Top</a></div>
   <div class="f-copy">sdwird/kaim · Lua aimbot · PC only · live from GitHub</div>
 </footer>
 
@@ -887,195 +479,75 @@
 
 <script>
 /* ═══ CURSOR ═══ */
-const cdot = document.getElementById('cdot'), cring = document.getElementById('cring');
-let mx = 0, my = 0, rx = 0, ry = 0;
-document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
-(function cursorLoop() {
-  cdot.style.left = mx + 'px'; cdot.style.top = my + 'px';
-  rx += (mx - rx) * 0.1; ry += (my - ry) * 0.1;
-  cring.style.left = rx + 'px'; cring.style.top = ry + 'px';
-  requestAnimationFrame(cursorLoop);
-})();
-document.querySelectorAll('a,button,.bento-card,.step-card,.arch-card,.install-card').forEach(el => {
-  el.addEventListener('mouseenter', () => document.body.classList.add('cursor-hover'));
-  el.addEventListener('mouseleave', () => document.body.classList.remove('cursor-hover'));
-});
+const cdot=document.getElementById('cdot'),cring=document.getElementById('cring'),spot=document.getElementById('spot');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;spot.style.left=mx+'px';spot.style.top=my+'px'});
+(function cLoop(){cdot.style.left=mx+'px';cdot.style.top=my+'px';rx+=(mx-rx)*.1;ry+=(my-ry)*.1;cring.style.left=rx+'px';cring.style.top=ry+'px';requestAnimationFrame(cLoop)})();
+document.querySelectorAll('a,button,.bc,.sc,.ac,.inst-c,.faq-q').forEach(el=>{el.addEventListener('mouseenter',()=>document.body.classList.add('c-h'));el.addEventListener('mouseleave',()=>document.body.classList.remove('c-h'))});
 
 /* ═══ PARTICLES ═══ */
-(function() {
-  const cv = document.getElementById('particles'), cx = cv.getContext('2d');
-  let W, H, pts = [];
-  function resize() { W = cv.width = innerWidth; H = cv.height = innerHeight; }
-  function make() { return { x: Math.random()*W, y: Math.random()*H, vx: (Math.random()-.5)*.3, vy: (Math.random()-.5)*.3, r: Math.random()*1.4+.4, a: Math.random()*.25+.05 }; }
-  function draw() {
-    cx.clearRect(0, 0, W, H);
-    for (let i = 0; i < pts.length; i++) {
-      const a = pts[i];
-      a.x += a.vx; a.y += a.vy;
-      if (a.x < 0 || a.x > W) a.vx *= -1;
-      if (a.y < 0 || a.y > H) a.vy *= -1;
-      cx.beginPath(); cx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
-      cx.fillStyle = `rgba(99,102,241,${a.a})`; cx.fill();
-      for (let j = i + 1; j < pts.length; j++) {
-        const b = pts[j], dx = a.x - b.x, dy = a.y - b.y, d = dx*dx + dy*dy;
-        if (d < 14000) {
-          cx.beginPath(); cx.moveTo(a.x, a.y); cx.lineTo(b.x, b.y);
-          cx.strokeStyle = `rgba(99,102,241,${.08*(1-d/14000)})`; cx.lineWidth = .5; cx.stroke();
-        }
-      }
-    }
-    requestAnimationFrame(draw);
-  }
-  window.addEventListener('resize', resize); resize();
-  pts = Array.from({ length: 55 }, make); draw();
-})();
+(function(){const cv=document.getElementById('ptc'),cx=cv.getContext('2d');let W,H,p=[];function rs(){W=cv.width=innerWidth;H=cv.height=innerHeight}function mk(){return{x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.28,vy:(Math.random()-.5)*.28,r:Math.random()*1.3+.4,a:Math.random()*.22+.04}}function dr(){cx.clearRect(0,0,W,H);for(let i=0;i<p.length;i++){const a=p[i];a.x+=a.vx;a.y+=a.vy;if(a.x<0||a.x>W)a.vx*=-1;if(a.y<0||a.y>H)a.vy*=-1;cx.beginPath();cx.arc(a.x,a.y,a.r,0,Math.PI*2);cx.fillStyle=`rgba(109,91,239,${a.a})`;cx.fill();for(let j=i+1;j<p.length;j++){const b=p[j],dx=a.x-b.x,dy=a.y-b.y,d=dx*dx+dy*dy;if(d<14000){cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.strokeStyle=`rgba(109,91,239,${.07*(1-d/14000)})`;cx.lineWidth=.5;cx.stroke()}}}requestAnimationFrame(dr)}window.addEventListener('resize',rs);rs();p=Array.from({length:50},mk);dr()})();
 
-/* ═══ NAV SCROLL ═══ */
-window.addEventListener('scroll', () => document.getElementById('nav').classList.toggle('scrolled', scrollY > 40));
+/* ═══ NAV ═══ */
+window.addEventListener('scroll',()=>document.getElementById('nav').classList.toggle('scrolled',scrollY>40));
+
+/* ═══ GLITCH ═══ */
+const ht=document.getElementById('htitle');
+function glitch(){ht.classList.add('glitch');setTimeout(()=>ht.classList.remove('glitch'),420)}
+setTimeout(glitch,1800);setInterval(glitch,4800);
 
 /* ═══ SCROLL REVEAL ═══ */
-const srObs = new IntersectionObserver(entries => {
-  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
-}, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
-document.querySelectorAll('.sr').forEach(el => srObs.observe(el));
+const sObs=new IntersectionObserver(e=>e.forEach(x=>{if(x.isIntersecting)x.target.classList.add('vis')}),{threshold:.06,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.sr').forEach(el=>sObs.observe(el));
 
-/* ═══ COUNT UP ═══ */
-function countUp(el, val, dur = 1200) {
-  if (!el || val <= 0) { if (el) el.textContent = val; return; }
-  const start = Date.now();
-  (function frame() {
-    const t = Math.min((Date.now() - start) / dur, 1);
-    el.textContent = Math.round((1 - Math.pow(1 - t, 3)) * val);
-    if (t < 1) requestAnimationFrame(frame);
-  })();
-}
+/* ═══ COUNTUP ═══ */
+function countUp(el,v,d=1200){if(!el||v<=0){if(el)el.textContent=v;return}const s=Date.now();(function f(){const t=Math.min((Date.now()-s)/d,1);el.textContent=Math.round((1-Math.pow(1-t,3))*v);if(t<1)requestAnimationFrame(f)})()}
 
-/* ═══ TERMINAL ANIMATION ═══ */
-const termLines = [
-  { p: '$', c: 'cmd', t: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-v10.1.lua"))()' },
-  { p: '»', c: 'info', t: 'Connecting to raw.githubusercontent.com…' },
-  { p: '»', c: 'info', t: 'Fetching kaim-v10.1.lua…' },
-  { p: '»', c: 'info', t: 'Script downloaded  (78.8 KB)' },
-  { p: '»', c: 'ok', t: '[KAIM v10.1] Loading Obsidian Library…' },
-  { p: '»', c: 'ok', t: '[KAIM v10.1] Zero-Bridge Proxy: ACTIVE' },
-  { p: '»', c: 'ok', t: '[KAIM v10.1] ESP Engine: STANDBY' },
-  { p: '»', c: 'ok', t: '[KAIM v10.1] Aimbot: READY ●' },
-];
-const termDelays = [0, 700, 1200, 1800, 2500, 3100, 3600, 4100];
-let termStarted = false;
-const termObs = new IntersectionObserver(entries => {
-  entries.forEach(e => {
-    if (e.isIntersecting && !termStarted) {
-      termStarted = true;
-      const body = document.getElementById('term-body');
-      body.innerHTML = '';
-      termLines.forEach((l, i) => {
-        setTimeout(() => {
-          const prev = body.querySelectorAll('.term-line');
-          prev.forEach(p => p.style.opacity = '1');
-          const cur = body.querySelector('.t-cursor');
-          if (cur) cur.remove();
-          const row = document.createElement('div');
-          row.className = 'term-line';
-          const cc = l.c === 'cmd' ? 't-cmd' : l.c === 'ok' ? 't-ok' : 't-info';
-          row.innerHTML = `<span class="t-prompt">${l.p}</span><span class="${cc}">${l.t}</span>`;
-          body.appendChild(row);
-          if (i < termLines.length - 1) {
-            const cursor = document.createElement('span');
-            cursor.className = 't-cursor';
-            body.appendChild(cursor);
-          }
-        }, termDelays[i]);
-      });
-    }
-  });
-}, { threshold: 0.3 });
-const termEl = document.querySelector('#terminal');
-if (termEl) termObs.observe(termEl);
+/* ═══ TERMINAL ═══ */
+const tLines=[{p:'$',c:'cmd',t:'loadstring(game:HttpGet("https://raw.githubusercontent.com/sdwird/kaim/refs/heads/main/kaim-v10.1.lua"))()'},{p:'»',c:'info',t:'Connecting to raw.githubusercontent.com…'},{p:'»',c:'info',t:'Fetching kaim-v10.1.lua…'},{p:'»',c:'info',t:'Script downloaded  (78.8 KB)'},{p:'»',c:'ok',t:'[KAIM v10.1] Loading Obsidian Library…'},{p:'»',c:'ok',t:'[KAIM v10.1] Zero-Bridge Proxy: ACTIVE'},{p:'»',c:'ok',t:'[KAIM v10.1] ESP Engine: STANDBY'},{p:'»',c:'ok',t:'[KAIM v10.1] Aimbot: READY ●'}];
+const tD=[0,700,1200,1800,2500,3100,3600,4100];let tStarted=false;
+const tObs=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting&&!tStarted){tStarted=true;const b=document.getElementById('term-b');b.innerHTML='';tLines.forEach((l,i)=>{setTimeout(()=>{const c=b.querySelector('.t-cursor');if(c)c.remove();const r=document.createElement('div');r.className='t-line';const cc=l.c==='cmd'?'t-cmd':l.c==='ok'?'t-ok':'t-info';r.innerHTML=`<span class="t-pr">${l.p}</span><span class="${cc}">${l.t}</span>`;b.appendChild(r);if(i<tLines.length-1){const cur=document.createElement('span');cur.className='t-cursor';b.appendChild(cur)}},tD[i])})}})},{threshold:.3});
+const tEl=document.querySelector('#terminal');if(tEl)tObs.observe(tEl);
+
+/* ═══ FAQ ═══ */
+function toggleFaq(q){const item=q.parentElement;item.classList.toggle('open')}
 
 /* ═══ TICKER ═══ */
-function buildTicker(vers) {
-  const extras = ['Lua 5.1', 'PC Only', 'Roblox', 'Free & Open', 'sdwird/kaim', 'Auto-Updated', 'Obsidian UI', 'Zero-Bridge Engine'];
-  const all = [...vers.map(v => v.replace('.lua', '')), ...extras];
-  document.getElementById('ticker-track').innerHTML = [...all, ...all].map(x =>
-    `<span class="ticker-item"><span class="ticker-dot"></span>${x}</span>`
-  ).join('');
-}
+function buildTicker(vers){const extras=['Lua 5.1','PC Only','Roblox','Free & Open','sdwird/kaim','Auto-Updated','Obsidian UI','Zero-Bridge','Single-Lock'];const all=[...vers.map(v=>v.replace('.lua','')),...extras];document.getElementById('ticker-t').innerHTML=[...all,...all].map(x=>`<span class="ticker-i"><span class="ticker-d"></span>${x}</span>`).join('')}
 
 /* ═══ VERSION PARSER ═══ */
-function verScore(n) {
-  const m = n.match(/kaim-v(\d+)[._]?(\d*)/);
-  if (!m) return 0;
-  return parseInt(m[1]) * 100 + (m[2] ? parseInt(m[2]) : 0);
-}
+function verScore(n){const m=n.match(/kaim-v(\d+)[._]?(\d*)/);if(!m)return 0;return parseInt(m[1])*100+(m[2]?parseInt(m[2]):0)}
+
+/* ═══ FILE TREE ═══ */
+function renderTree(files,exp,stab){const box=document.getElementById('tbox');box.innerHTML='<div class="tree-dir">kaim/</div>';files.forEach((f,i)=>{const isE=f===exp,isS=f===stab,isR=f==='README.md';let badge='',cls='tree-f';if(isE){badge='<span class="tree-badge tb-l">latest</span>';cls='tree-m'}if(isS){badge='<span class="tree-badge tb-s">stable</span>';cls='tree-m'}if(isR){badge='<span class="tree-badge tb-r">readme</span>';cls='tree-m'}const row=document.createElement('div');row.className='tree-row';row.setAttribute('data-name',f.toLowerCase());row.style.animationDelay=(i*20)+'ms';row.style.opacity='0';row.style.animation=`fin .25s ${i*20}ms ease forwards`;row.innerHTML=`<span>├── <span class="${cls}">${f}</span></span>${badge}`;box.appendChild(row)})}
+function filterTree(q){document.querySelectorAll('.tree-row').forEach(r=>{r.style.display=r.getAttribute('data-name').includes(q.toLowerCase())?'':'none'})}
 
 /* ═══ GITHUB API ═══ */
-const OWNER = 'sdwird', REPO = 'kaim';
-const RAW_BASE = `https://raw.githubusercontent.com/${OWNER}/${REPO}/refs/heads/main/`;
+const OW='sdwird',RE='kaim',RAW=`https://raw.githubusercontent.com/${OW}/${RE}/refs/heads/main/`;
+const FB=['kaim-v10.2.lua','kaim-v10.1.lua','kaim-v8.8.lua','kaim-v8.2.lua'];
 
-async function loadGitHub() {
-  // Repo stats
-  try {
-    const r = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}`);
-    if (r.ok) {
-      const d = await r.json();
-      countUp(document.getElementById('s-stars'), d.stargazers_count || 0);
-      countUp(document.getElementById('s-forks'), d.forks_count || 0);
-    }
-  } catch (_) {}
-
-  // File tree
-  let files = [];
-  const fallback = ['kaim-v10.2.lua', 'kaim-v10.1.lua', 'kaim-v8.8.lua', 'kaim-v8.2.lua'];
-  try {
-    const r = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/trees/main?recursive=1`);
-    if (!r.ok) throw 0;
-    const d = await r.json();
-    files = d.tree.filter(f => f.type === 'blob').map(f => f.path);
-  } catch (_) { files = fallback; }
-
-  // Version detection
-  const vers = files.filter(f => /^kaim-v[\d.]+\.lua$/.test(f)).sort((a, b) => verScore(b) - verScore(a));
-  const exp = vers[0] || 'kaim-v10.2.lua';
-  const stable = vers[1] || 'kaim-v10.1.lua';
-
-  const expUrl = RAW_BASE + exp;
-  const stableUrl = RAW_BASE + stable;
-  const expVer = exp.replace('kaim-', '').replace('.lua', '');
-  const stableVer = stable.replace('kaim-', '').replace('.lua', '');
-
-  // Update nav
-  document.getElementById('nav-ver').textContent = expVer;
-  const wvEl = document.getElementById('wv-ver');
-  if (wvEl) wvEl.textContent = exp.replace('.lua', '');
-
-  // Update install cards
-  document.getElementById('exp-badge').textContent = expVer;
-  document.getElementById('stable-badge').textContent = stableVer;
-  document.getElementById('exp-url').textContent = `"${expUrl}"`;
-  document.getElementById('stable-url').textContent = `"${stableUrl}"`;
-
-  // Stats
-  countUp(document.getElementById('s-vers'), vers.length || 9);
-
-  // Copy buttons
-  function setupCopy(btnId, url) {
-    const btn = document.getElementById(btnId);
-    btn.addEventListener('click', () => {
-      navigator.clipboard.writeText(`loadstring(game:HttpGet("${url}"))()`);
-      btn.textContent = '✓ Copied!';
-      btn.classList.add('copied');
-      setTimeout(() => { btn.textContent = 'Copy Loadstring'; btn.classList.remove('copied'); }, 2500);
-    });
-  }
-  setupCopy('btn-exp', expUrl);
-  setupCopy('btn-stable', stableUrl);
-
-  // Ticker
-  buildTicker(vers.length ? vers : fallback);
+async function loadGH(){
+  try{const r=await fetch(`https://api.github.com/repos/${OW}/${RE}`);if(r.ok){const d=await r.json();countUp(document.getElementById('s-stars'),d.stargazers_count||0);countUp(document.getElementById('s-forks'),d.forks_count||0)}}catch(_){}
+  let files=[];
+  try{const r=await fetch(`https://api.github.com/repos/${OW}/${RE}/git/trees/main?recursive=1`);if(!r.ok)throw 0;const d=await r.json();files=d.tree.filter(f=>f.type==='blob').map(f=>f.path)}catch(_){files=FB}
+  const vers=files.filter(f=>/^kaim-v[\d.]+\.lua$/.test(f)).sort((a,b)=>verScore(b)-verScore(a));
+  const exp=vers[0]||'kaim-v10.2.lua',stab=vers[1]||'kaim-v10.1.lua';
+  const expUrl=RAW+exp,stabUrl=RAW+stab;
+  const expV=exp.replace('kaim-','').replace('.lua',''),stabV=stab.replace('kaim-','').replace('.lua','');
+  document.getElementById('nav-ver').textContent=expV;
+  const wv=document.getElementById('wv-ver');if(wv)wv.textContent=exp.replace('.lua','');
+  document.getElementById('exp-badge').textContent=expV;
+  document.getElementById('stable-badge').textContent=stabV;
+  document.getElementById('exp-url').textContent='"'+expUrl+'"';
+  document.getElementById('stable-url').textContent='"'+stabUrl+'"';
+  countUp(document.getElementById('s-vers'),vers.length||9);
+  const sv2=document.getElementById('stripe-vers');if(sv2)sv2.textContent=vers.length||'9+';
+  document.getElementById('fcount').innerHTML='<em style="font-style:normal;color:var(--accent2)">'+files.length+'</em> files';
+  function setupCopy(btnId,url){const btn=document.getElementById(btnId);btn.addEventListener('click',()=>{navigator.clipboard.writeText('loadstring(game:HttpGet("'+url+'"))()');btn.textContent='✓ Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy Loadstring';btn.classList.remove('copied')},2500)})}
+  setupCopy('btn-exp',expUrl);setupCopy('btn-stable',stabUrl);
+  renderTree(files,exp,stab);buildTicker(vers.length?vers:FB);
 }
-
-loadGitHub();
+loadGH();
 </script>
 </body>
 </html>
